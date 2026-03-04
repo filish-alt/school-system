@@ -1,0 +1,447 @@
+{
+  "info": {
+    "_postman_id": "c7c9ec55-1b1d-4a49-8c38-958bfe1a4f0a",
+    "name": "School Exam API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection to test Super Admin and School Admin endpoints"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "tenantId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "POST /api/v1/auth/login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  var data = pm.response.json();",
+                  "  if (data && data.token) {",
+                  "    pm.collectionVariables.set('token', data.token);",
+                  "    pm.test('Token present', function() { pm.expect(data.token).to.be.a('string'); });",
+                  "  }",
+                  "} catch(e) {",
+                  "  console.log('Failed to parse token', e);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"superadmin\",\n  \"password\": \"superadmin123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Super Admin",
+      "item": [
+        {
+          "name": "Tenants",
+          "item": [
+            {
+              "name": "GET /api/v1/superadmin/tenants",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/tenants?page=1&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "tenants"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "GET /api/v1/superadmin/tenants/:id",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/tenants/{{tenantId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "tenants", "{{tenantId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST /api/v1/superadmin/tenants",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "try {",
+                      "  var data = pm.response.json();",
+                      "  if (data && data.id) { pm.collectionVariables.set('tenantId', data.id); }",
+                      "} catch(e) {}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Springfield High\",\n  \"address\": \"742 Evergreen Terrace\",\n  \"phone\": \"+1-555-1234\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/tenants",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "tenants"]
+                }
+              }
+            },
+            {
+              "name": "PATCH /api/v1/superadmin/tenants",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"{{tenantId}}\",\n  \"name\": \"Springfield High Updated\",\n  \"address\": \"742 Evergreen Terrace\",\n  \"phone\": \"+1-555-5678\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/tenants",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "tenants"]
+                }
+              }
+            },
+            {
+              "name": "DELETE /api/v1/superadmin/tenants/:id",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/tenants/{{tenantId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "tenants", "{{tenantId}}"]
+                }
+              }
+            },
+            {
+              "name": "POST /api/v1/superadmin/tenants/:id/activate",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/tenants/{{tenantId}}/activate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "tenants", "{{tenantId}}", "activate"]
+                }
+              }
+            },
+            {
+              "name": "POST /api/v1/superadmin/tenants/:id/deactivate",
+              "request": {
+                "method": "POST",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/tenants/{{tenantId}}/deactivate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "tenants", "{{tenantId}}", "deactivate"]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Students",
+          "item": [
+            {
+              "name": "GET /api/v1/superadmin/students",
+              "request": {
+                "method": "GET",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/students?tenant_id={{tenantId}}&page=1&page_size=20",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "students"],
+                  "query": [
+                    { "key": "tenant_id", "value": "{{tenantId}}" },
+                    { "key": "page", "value": "1" },
+                    { "key": "page_size", "value": "20" }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "POST /api/v1/superadmin/students",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tenant_id\": \"{{tenantId}}\",\n  \"student_code\": \"STU-001\",\n  \"first_name\": \"Lisa\",\n  \"last_name\": \"Simpson\",\n  \"email\": \"lisa@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "students"]
+                }
+              }
+            },
+            {
+              "name": "PATCH /api/v1/superadmin/students/:id",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"id\": \"<student_id>\",\n  \"first_name\": \"Lisa\",\n  \"last_name\": \"S.\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/students/<student_id>",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "students", "<student_id>"]
+                }
+              }
+            },
+            {
+              "name": "DELETE /api/v1/superadmin/students/:id",
+              "request": {
+                "method": "DELETE",
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/students/<student_id>",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "students", "<student_id>"]
+                }
+              }
+            },
+            {
+              "name": "POST /api/v1/superadmin/students/import",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    { "key": "tenant_id", "value": "{{tenantId}}", "type": "text" },
+                    { "key": "file", "type": "file", "src": "examples/students.csv" }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/superadmin/students/import",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "superadmin", "students", "import"]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "School Admin",
+      "item": [
+        {
+          "name": "Departments",
+          "item": [
+            {
+              "name": "POST /api/v1/school/departments",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Mathematics\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/departments", "host": ["{{baseUrl}}"], "path": ["api","v1","school","departments"] }
+              }
+            },
+            {
+              "name": "GET /api/v1/school/departments",
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/departments?page=1&page_size=20", "host": ["{{baseUrl}}"], "path": ["api","v1","school","departments"], "query": [{"key":"page","value":"1"},{"key":"page_size","value":"20"}] }
+              }
+            },
+            {
+              "name": "PATCH /api/v1/school/departments",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"id\": \"<department_id>\",\n  \"name\": \"STEM\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/departments", "host": ["{{baseUrl}}"], "path": ["api","v1","school","departments"] }
+              }
+            },
+            {
+              "name": "DELETE /api/v1/school/departments/:id",
+              "request": {
+                "method": "DELETE",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/departments/<department_id>", "host": ["{{baseUrl}}"], "path": ["api","v1","school","departments","<department_id>"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sections",
+          "item": [
+            {
+              "name": "POST /api/v1/school/sections",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Grade 10 A\",\n  \"grade_level\": \"10\",\n  \"academic_year\": \"2025-2026\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/sections", "host": ["{{baseUrl}}"], "path": ["api","v1","school","sections"] }
+              }
+            },
+            {
+              "name": "GET /api/v1/school/sections",
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/sections?page=1&page_size=20", "host": ["{{baseUrl}}"], "path": ["api","v1","school","sections"], "query": [{"key":"page","value":"1"},{"key":"page_size","value":"20"}] }
+              }
+            },
+            {
+              "name": "PATCH /api/v1/school/sections",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"id\": \"<section_id>\",\n  \"name\": \"Grade 10 B\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/sections", "host": ["{{baseUrl}}"], "path": ["api","v1","school","sections"] }
+              }
+            },
+            {
+              "name": "DELETE /api/v1/school/sections/:id",
+              "request": {
+                "method": "DELETE",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/sections/<section_id>", "host": ["{{baseUrl}}"], "path": ["api","v1","school","sections","<section_id>"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Subjects",
+          "item": [
+            {
+              "name": "POST /api/v1/school/subjects",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"Biology\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/subjects", "host": ["{{baseUrl}}"], "path": ["api","v1","school","subjects"] }
+              }
+            },
+            {
+              "name": "GET /api/v1/school/subjects",
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/subjects?page=1&page_size=20", "host": ["{{baseUrl}}"], "path": ["api","v1","school","subjects"], "query": [{"key":"page","value":"1"},{"key":"page_size","value":"20"}] }
+              }
+            },
+            {
+              "name": "PATCH /api/v1/school/subjects",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"id\": \"<subject_id>\",\n  \"name\": \"Advanced Biology\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/subjects", "host": ["{{baseUrl}}"], "path": ["api","v1","school","subjects"] }
+              }
+            },
+            {
+              "name": "DELETE /api/v1/school/subjects/:id",
+              "request": {
+                "method": "DELETE",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/subjects/<subject_id>", "host": ["{{baseUrl}}"], "path": ["api","v1","school","subjects","<subject_id>"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Teachers",
+          "item": [
+            {
+              "name": "POST /api/v1/school/teachers",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"first_name\": \"Edna\",\n  \"last_name\": \"Krabappel\",\n  \"email\": \"edna@example.com\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/teachers", "host": ["{{baseUrl}}"], "path": ["api","v1","school","teachers"] }
+              }
+            },
+            {
+              "name": "GET /api/v1/school/teachers",
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/teachers?page=1&page_size=20", "host": ["{{baseUrl}}"], "path": ["api","v1","school","teachers"], "query": [{"key":"page","value":"1"},{"key":"page_size","value":"20"}] }
+              }
+            },
+            {
+              "name": "PATCH /api/v1/school/teachers",
+              "request": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"id\": \"<teacher_id>\",\n  \"last_name\": \"K.\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/teachers", "host": ["{{baseUrl}}"], "path": ["api","v1","school","teachers"] }
+              }
+            },
+            {
+              "name": "DELETE /api/v1/school/teachers/:id",
+              "request": {
+                "method": "DELETE",
+                "url": { "raw": "{{baseUrl}}/api/v1/school/teachers/<teacher_id>", "host": ["{{baseUrl}}"], "path": ["api","v1","school","teachers","<teacher_id>"] }
+              }
+            },
+            {
+              "name": "POST /api/v1/school/assignments",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"teacher_id\": \"<teacher_id>\",\n  \"subject_id\": \"<subject_id>\",\n  \"section_id\": \"<section_id>\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/assignments", "host": ["{{baseUrl}}"], "path": ["api","v1","school","assignments"] }
+              }
+            },
+            {
+              "name": "DELETE /api/v1/school/assignments",
+              "request": {
+                "method": "DELETE",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"teacher_id\": \"<teacher_id>\",\n  \"subject_id\": \"<subject_id>\",\n  \"section_id\": \"<section_id>\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/school/assignments", "host": ["{{baseUrl}}"], "path": ["api","v1","school","assignments"] }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
