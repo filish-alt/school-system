@@ -1,0 +1,6 @@
+student_code,first_name,last_name,year,section_id,department_id,email
+STU-0001,Lisa,Simpson,2025,4970b65c-d357-4e14-a7c8-a19e82cbcd48,4f1ebe6d-f9eb-408b-869a-b4aa8c51c4c6,lisa.simpson@example.com
+STU-0002,Bart,Simpson,2025,4970b65c-d357-4e14-a7c8-a19e82cbcd48,4f1ebe6d-f9eb-408b-869a-b4aa8c51c4c6,bart.simpson@example.com
+STU-0003,Milhouse,Van Houten,2025,4970b65c-d357-4e14-a7c8-a19e82cbcd48,4f1ebe6d-f9eb-408b-869a-b4aa8c51c4c6,milhouse@example.com
+STU-0004,Allison,Taylor,2025,4970b65c-d357-4e14-a7c8-a19e82cbcd48,,allison.taylor@example.com
+STU-0005,Martin,Prince,2025,,4f1ebe6d-f9eb-408b-869a-b4aa8c51c4c6,martin.prince@example.com

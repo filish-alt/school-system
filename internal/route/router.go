@@ -6,17 +6,23 @@ import (
 	hAuth "school-exam/internal/handler/auth"
 	hSchool "school-exam/internal/handler/school"
 	hSuper "school-exam/internal/handler/superadmin"
+	hTeacher "school-exam/internal/handler/teacher"
+	hExam "school-exam/internal/handler/exam"
 	"school-exam/internal/middleware"
 	"school-exam/internal/module/auth"
+	"school-exam/internal/module/exam"
 	"school-exam/internal/module/school"
 	"school-exam/internal/module/superadmin"
+	"school-exam/internal/module/teacher"
 	"school-exam/internal/security"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *school.Usecase, ts security.TokenService) *gin.Engine {
+func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *school.Usecase, teacherUC *teacher.Usecase, examUC *exam.Usecase, ts security.TokenService) *gin.Engine {
 	r := gin.Default()
+	r.Use(CORSMiddleware())
+	
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
 	ah := hAuth.New(authUC)
 	// public group
@@ -67,6 +73,55 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	schoolGroup.DELETE("/teachers/:id", sch.DeleteTeacher)
 	schoolGroup.POST("/assignments", sch.Assign)
 	schoolGroup.DELETE("/assignments", sch.Unassign)
+	schoolGroup.GET("/assignments", sch.ListAssignedTeachers)
+	
+	// teacher routes
+	teacherGroup := authed.Group("/teacher")
+	teacherGroup.Use(middleware.RequireRoles("teacher"))
+	th := hTeacher.New(teacherUC)
+	teacherGroup.POST("/question-banks", th.CreateQuestionBank)
+	teacherGroup.GET("/question-banks", th.ListQuestionBanks)
+	teacherGroup.POST("/questions", th.CreateQuestion)
+	teacherGroup.GET("/questions", th.ListQuestions)
+	teacherGroup.POST("/questions/import", th.ImportQuestions)
+	teacherGroup.PATCH("/questions", th.UpdateQuestion)
+	teacherGroup.DELETE("/questions/:id", th.DeleteQuestion)
+	teacherGroup.POST("/options", th.CreateOption)
+	teacherGroup.GET("/options", th.ListOptions)
+	teacherGroup.PATCH("/options", th.UpdateOption)
+	teacherGroup.DELETE("/options/:id", th.DeleteOption)
+	teacherGroup.GET("/students", th.ListMyStudents)
+	teacherGroup.GET("/my-assignments", th.ListMyAssignments)
+
+	// exam routes
+	eh := hExam.New(examUC)
+	teacherGroup.POST("/exams", eh.CreateExam)
+	teacherGroup.GET("/exams", eh.ListExams)
+	teacherGroup.GET("/exams/:id", eh.GetExam)
+	teacherGroup.PATCH("/exams", eh.UpdateExam)
+	teacherGroup.PATCH("/exams/:id/status", eh.UpdateStatus)
+	teacherGroup.DELETE("/exams/:id", eh.DeleteExam)
+	teacherGroup.POST("/exams/questions", eh.AddQuestions)
+	teacherGroup.POST("/exams/questions/random", eh.AddRandomQuestions)
+	teacherGroup.DELETE("/exams/questions/:id", eh.RemoveQuestion)
+
 	authed.GET("/me", func(c *gin.Context) { c.JSON(200, gin.H{"time": time.Now().UTC()}) })
 	return r
+}
+
+
+func CORSMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control,X-API-Key, X-Requested-With")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE, PATCH")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	}
 }

@@ -3,8 +3,9 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/google/uuid"
 	q "school-exam/internal/sqlc/gen"
+
+	"github.com/google/uuid"
 )
 
 type TeacherRepository struct {
@@ -65,3 +66,30 @@ func (r *TeacherRepository) ListAssignments(ctx context.Context, teacherID strin
 	})
 }
 
+func (r *TeacherRepository) GetByUserID(ctx context.Context, userID string) (q.Teacher, error) {
+	return r.Queries.GetTeacherByUserID(ctx, sql.NullString{String: userID, Valid: true})
+}
+
+func (r *TeacherRepository) ListStudents(ctx context.Context, teacherID string, limit, offset int64) ([]q.Student, error) {
+	return r.Queries.ListStudentsByTeacher(ctx, q.ListStudentsByTeacherParams{
+		TeacherID: sql.NullString{String: teacherID, Valid: true},
+		Limit:     limit,
+		Offset:    offset,
+	})
+}
+
+func (r *TeacherRepository) ListAssignmentsDetailedByTenant(ctx context.Context, tenantID string, limit, offset int64) ([]q.ListTeacherAssignmentsByTenantRow, error) {
+	return r.Queries.ListTeacherAssignmentsByTenant(ctx, q.ListTeacherAssignmentsByTenantParams{
+		TenantID: sql.NullString{String: tenantID, Valid: true},
+		Limit:    limit,
+		Offset:   offset,
+	})
+}
+
+func (r *TeacherRepository) ListAssignmentsDetailedByTeacher(ctx context.Context, teacherID string, limit, offset int64) ([]q.ListTeacherAssignmentsByTeacherRow, error) {
+	return r.Queries.ListTeacherAssignmentsByTeacher(ctx, q.ListTeacherAssignmentsByTeacherParams{
+		TeacherID: sql.NullString{String: teacherID, Valid: true},
+		Limit:     limit,
+		Offset:    offset,
+	})
+}

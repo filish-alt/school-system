@@ -31,11 +31,12 @@ func (r *StudentRepository) ListByTenant(ctx context.Context, tenantID string, l
 	})
 }
 
-func (r *StudentRepository) Update(ctx context.Context, id string, firstName, lastName *string, sectionID, departmentID *string) error {
+func (r *StudentRepository) Update(ctx context.Context, id string, firstName, lastName, year *string, sectionID, departmentID *string) error {
 	return r.Queries.UpdateStudent(ctx, q.UpdateStudentParams{
 		ID:           id,
 		FirstName:    toNullString(firstName),
 		LastName:     toNullString(lastName),
+		Year:         toNullString(year),
 		SectionID:    toNullString(sectionID),
 		DepartmentID: toNullString(departmentID),
 	})

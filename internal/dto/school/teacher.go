@@ -32,6 +32,15 @@ type UnassignRequest struct {
 	SectionID string `json:"section_id" binding:"required"`
 }
 
+type AssignedTeacher struct {
+	TeacherID    string  `json:"teacher_id"`
+	FirstName    string  `json:"first_name"`
+	LastName     string  `json:"last_name"`
+	DepartmentID *string `json:"department_id"`
+	SubjectID    string  `json:"subject_id"`
+	SectionID    string  `json:"section_id"`
+}
+
 type TeacherListQuery struct {
 	Page     int64 `form:"page"`
 	PageSize int64 `form:"page_size"`

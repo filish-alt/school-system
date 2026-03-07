@@ -11,8 +11,8 @@ import (
 )
 
 const createStudent = `-- name: CreateStudent :exec
-INSERT INTO students (id, tenant_id, student_code, first_name, last_name, section_id, department_id, user_id, status)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+INSERT INTO students (id, tenant_id, student_code, first_name, last_name, year, section_id, department_id, user_id, status)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
 `
 
 type CreateStudentParams struct {
@@ -21,6 +21,7 @@ type CreateStudentParams struct {
 	StudentCode  sql.NullString `json:"student_code"`
 	FirstName    sql.NullString `json:"first_name"`
 	LastName     sql.NullString `json:"last_name"`
+	Year         sql.NullString `json:"year"`
 	SectionID    sql.NullString `json:"section_id"`
 	DepartmentID sql.NullString `json:"department_id"`
 	UserID       sql.NullString `json:"user_id"`
@@ -33,6 +34,7 @@ func (q *Queries) CreateStudent(ctx context.Context, arg CreateStudentParams) er
 		arg.StudentCode,
 		arg.FirstName,
 		arg.LastName,
+		arg.Year,
 		arg.SectionID,
 		arg.DepartmentID,
 		arg.UserID,
@@ -41,7 +43,7 @@ func (q *Queries) CreateStudent(ctx context.Context, arg CreateStudentParams) er
 }
 
 const getStudentByID = `-- name: GetStudentByID :one
-SELECT id, tenant_id, student_code, first_name, last_name, section_id, department_id, user_id, status
+SELECT id, tenant_id, student_code, first_name, last_name, year, section_id, department_id, user_id, status
 FROM students WHERE id = ? LIMIT 1
 `
 
@@ -54,6 +56,7 @@ func (q *Queries) GetStudentByID(ctx context.Context, id string) (Student, error
 		&i.StudentCode,
 		&i.FirstName,
 		&i.LastName,
+		&i.Year,
 		&i.SectionID,
 		&i.DepartmentID,
 		&i.UserID,
@@ -63,7 +66,7 @@ func (q *Queries) GetStudentByID(ctx context.Context, id string) (Student, error
 }
 
 const listByTenant = `-- name: ListByTenant :many
-SELECT id, tenant_id, student_code, first_name, last_name, section_id, department_id, user_id, status
+SELECT id, tenant_id, student_code, first_name, last_name, year, section_id, department_id, user_id, status
 FROM students WHERE tenant_id = ? ORDER BY last_name, first_name LIMIT ? OFFSET ?
 `
 
@@ -88,6 +91,7 @@ func (q *Queries) ListByTenant(ctx context.Context, arg ListByTenantParams) ([]S
 			&i.StudentCode,
 			&i.FirstName,
 			&i.LastName,
+			&i.Year,
 			&i.SectionID,
 			&i.DepartmentID,
 			&i.UserID,
@@ -121,12 +125,13 @@ func (q *Queries) SetStudentStatus(ctx context.Context, arg SetStudentStatusPara
 }
 
 const updateStudent = `-- name: UpdateStudent :exec
-UPDATE students SET first_name = ?, last_name = ?, section_id = ?, department_id = ? WHERE id = ?
+UPDATE students SET first_name = ?, last_name = ?, year = ?, section_id = ?, department_id = ? WHERE id = ?
 `
 
 type UpdateStudentParams struct {
 	FirstName    sql.NullString `json:"first_name"`
 	LastName     sql.NullString `json:"last_name"`
+	Year         sql.NullString `json:"year"`
 	SectionID    sql.NullString `json:"section_id"`
 	DepartmentID sql.NullString `json:"department_id"`
 	ID           string         `json:"id"`
@@ -136,6 +141,7 @@ func (q *Queries) UpdateStudent(ctx context.Context, arg UpdateStudentParams) er
 	_, err := q.db.ExecContext(ctx, updateStudent,
 		arg.FirstName,
 		arg.LastName,
+		arg.Year,
 		arg.SectionID,
 		arg.DepartmentID,
 		arg.ID,

@@ -1,0 +1,391 @@
+{
+    "info": {
+        "_postman_id": "b1d8e3c4-9a2b-4c5d-8e6f-7a8b9c0d1e2f",
+        "name": "School Exam - Exam Module API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "description": "Endpoints for managing exams, including creation, scheduling, and question assignment."
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:8080"
+        },
+        {
+            "key": "token",
+            "value": ""
+        },
+        {
+            "key": "examId",
+            "value": ""
+        },
+        {
+            "key": "bankId",
+            "value": ""
+        },
+        {
+            "key": "questionId",
+            "value": ""
+        },
+        {
+            "key": "examQuestionId",
+            "value": ""
+        },
+        {
+            "key": "subjectId",
+            "value": "<subject_id>"
+        },
+        {
+            "key": "sectionId",
+            "value": "<section_id>"
+        }
+    ],
+    "auth": {
+        "type": "bearer",
+        "bearer": [
+            {
+                "key": "token",
+                "value": "{{token}}",
+                "type": "string"
+            }
+        ]
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "POST /api/v1/auth/login (teacher)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "try { var data = pm.response.json(); if (data && data.token) { pm.collectionVariables.set('token', data.token); } } catch(e) {}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"username\": \"<teacher_username>\",\n  \"password\": \"<teacher_password>\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/auth/login",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "auth",
+                                "login"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Exams",
+            "item": [
+                {
+                    "name": "POST /api/v1/teacher/exams",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "type": "text/javascript",
+                                "exec": [
+                                    "try { var data = pm.response.json(); if (data && data.id) { pm.collectionVariables.set('examId', data.id); } } catch(e) {}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Midterm Mathematics\",\n  \"subject_id\": \"{{subjectId}}\",\n  \"section_id\": \"{{sectionId}}\",\n  \"duration_minutes\": 60,\n  \"start_time\": \"2026-04-01T09:00:00Z\",\n  \"end_time\": \"2026-04-01T10:00:00Z\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "GET /api/v1/teacher/exams",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams?page=1&page_size=20",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "page_size",
+                                    "value": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "GET /api/v1/teacher/exams/:id",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams/{{examId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams",
+                                "{{examId}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "PATCH /api/v1/teacher/exams",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": \"{{examId}}\",\n  \"title\": \"Final Mathematics\",\n  \"shuffle_options\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "PATCH /api/v1/teacher/exams/:id/status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"published\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams/{{examId}}/status",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams",
+                                "{{examId}}",
+                                "status"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "DELETE /api/v1/teacher/exams/:id",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams/{{examId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams",
+                                "{{examId}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Exam Questions",
+            "item": [
+                {
+                    "name": "POST /api/v1/teacher/exams/questions (Manual)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"exam_id\": \"{{examId}}\",\n  \"questions\": [\n    {\n      \"question_id\": \"{{questionId}}\",\n      \"marks\": 10,\n      \"order_index\": 1\n    }\n  ],\n  \"shuffle_options\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams/questions",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams",
+                                "questions"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "POST /api/v1/teacher/exams/questions/random",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"exam_id\": \"{{examId}}\",\n  \"question_bank_id\": \"{{bankId}}\",\n  \"count\": 5,\n  \"marks\": 2,\n  \"shuffle_options\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams/questions/random",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams",
+                                "questions",
+                                "random"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "DELETE /api/v1/teacher/exams/questions/:id",
+                    "request": {
+                        "method": "DELETE",
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/exams/questions/{{examQuestionId}}?exam_id={{examId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "exams",
+                                "questions",
+                                "{{examQuestionId}}"
+                            ],
+                            "query": [
+                                {
+                                    "key": "exam_id",
+                                    "value": "{{examId}}"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "POST /api/v1/teacher/questions/import",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "bank_id",
+                                    "value": "{{bankId}}",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": ""
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/teacher/questions/import",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "teacher",
+                                "questions",
+                                "import"
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

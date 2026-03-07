@@ -62,6 +62,24 @@ func (q *Queries) GetTeacherByID(ctx context.Context, id string) (Teacher, error
 	return i, err
 }
 
+const getTeacherByUserID = `-- name: GetTeacherByUserID :one
+SELECT id, tenant_id, first_name, last_name, department_id, user_id FROM teachers WHERE user_id = ? LIMIT 1
+`
+
+func (q *Queries) GetTeacherByUserID(ctx context.Context, userID sql.NullString) (Teacher, error) {
+	row := q.db.QueryRowContext(ctx, getTeacherByUserID, userID)
+	var i Teacher
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.FirstName,
+		&i.LastName,
+		&i.DepartmentID,
+		&i.UserID,
+	)
+	return i, err
+}
+
 const listTeachersByTenant = `-- name: ListTeachersByTenant :many
 SELECT id, tenant_id, first_name, last_name, department_id, user_id FROM teachers WHERE tenant_id = ? ORDER BY last_name, first_name LIMIT ? OFFSET ?
 `

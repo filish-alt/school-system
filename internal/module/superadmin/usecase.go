@@ -106,7 +106,7 @@ func (u *Usecase) UpdateStudent(ctx context.Context, req sdto.UpdateStudentReque
 			return err
 		}
 	}
-	return u.Students.Update(ctx, req.ID, req.FirstName, req.LastName, req.SectionID, req.DepartmentID)
+	return u.Students.Update(ctx, req.ID, req.FirstName, req.LastName, req.Year, req.SectionID, req.DepartmentID)
 }
 
 func (u *Usecase) CreateStudent(ctx context.Context, req sdto.CreateStudentRequest) (*sdto.CreateStudentResponse, error) {
@@ -147,12 +147,15 @@ func (u *Usecase) CreateStudent(ctx context.Context, req sdto.CreateStudentReque
 		return nil, err
 	}
 	stID := uuid.New().String()
-	var section, dept sql.NullString
+	var section, dept, year sql.NullString
 	if req.SectionID != nil {
 		section = sql.NullString{Valid: true, String: *req.SectionID}
 	}
 	if req.DepartmentID != nil {
 		dept = sql.NullString{Valid: true, String: *req.DepartmentID}
+	}
+	if req.Year != nil {
+		year = sql.NullString{Valid: true, String: *req.Year}
 	}
 	err = u.Students.Create(ctx, q.CreateStudentParams{
 		ID:           stID,
@@ -160,6 +163,7 @@ func (u *Usecase) CreateStudent(ctx context.Context, req sdto.CreateStudentReque
 		StudentCode:  sql.NullString{Valid: true, String: req.StudentCode},
 		FirstName:    sql.NullString{Valid: true, String: req.FirstName},
 		LastName:     sql.NullString{Valid: true, String: req.LastName},
+		Year:         year,
 		SectionID:    section,
 		DepartmentID: dept,
 		UserID:       sql.NullString{Valid: true, String: userID},
@@ -227,6 +231,10 @@ func (u *Usecase) ImportStudents(ctx context.Context, tenantID string, r io.Read
 		em := get("email")
 		if em != "" {
 			req.Email = &em
+		}
+		yr := get("year")
+		if yr != "" {
+			req.Year = &yr
 		}
 		out, err := u.CreateStudent(ctx, req)
 		if err != nil {

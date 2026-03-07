@@ -299,6 +299,16 @@ func (u *Usecase) Unassign(ctx context.Context, req schooldto.UnassignRequest) e
 	return u.Teachers.Unassign(ctx, req.TeacherID, req.SubjectID, req.SectionID)
 }
 
+func (u *Usecase) ListTeacherAssignments(ctx context.Context, page, pageSize int64) (interface{}, error) {
+	tenantID, err := u.tenantFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	limit, offset := normalize(page, pageSize)
+
+	return u.Teachers.ListAssignmentsDetailedByTenant(ctx, tenantID, limit, offset)
+}
+
 func randHex(n int) string {
 	b := make([]byte, n)
 	_, _ = rand.Read(b)

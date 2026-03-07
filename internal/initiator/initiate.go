@@ -9,6 +9,8 @@ import (
 	"school-exam/internal/module/auth"
 	"school-exam/internal/module/school"
 	"school-exam/internal/module/superadmin"
+	"school-exam/internal/module/teacher"
+	"school-exam/internal/module/exam"
 	"school-exam/internal/repository"
 	"school-exam/internal/route"
 	"school-exam/internal/security"
@@ -37,6 +39,14 @@ func Initiate() (*App, error) {
 			return nil, err
 		}
 	}
+	// lightweight migration: ensure students.year exists
+	var colCount int
+	if err := sqlDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM pragma_table_info('students') WHERE name = 'year'").Scan(&colCount); err == nil && colCount == 0 {
+		_, _ = sqlDB.ExecContext(ctx, "ALTER TABLE students ADD COLUMN year TEXT")
+	}
+	if err := sqlDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM pragma_table_info('exams') WHERE name = 'shuffle_options'").Scan(&colCount); err == nil && colCount == 0 {
+		_, _ = sqlDB.ExecContext(ctx, "ALTER TABLE exams ADD COLUMN shuffle_options INTEGER DEFAULT 0")
+	}
 	usersRepo := repository.NewUserRepository(sqlDB)
 	tenRepo := repository.NewTenantRepository(sqlDB)
 	stuRepo := repository.NewStudentRepository(sqlDB)
@@ -44,14 +54,23 @@ func Initiate() (*App, error) {
 	secRepo := repository.NewSectionRepository(sqlDB)
 	subRepo := repository.NewSubjectRepository(sqlDB)
 	teaRepo := repository.NewTeacherRepository(sqlDB)
+	qbRepo := repository.NewQuestionBankRepository(sqlDB)
+	qqRepo := repository.NewQuestionRepository(sqlDB)
+	opRepo := repository.NewOptionRepository(sqlDB)
+	exRepo := repository.NewExamRepository(sqlDB)
+	eqRepo := repository.NewExamQuestionRepository(sqlDB)
+
 	ts := security.TokenService{Secret: cfg.JWTSecret, TTL: time.Hour * 8}
 	authUC := auth.NewAuthUsecase(usersRepo, ts)
 	superUC := superadmin.NewUsecase(tenRepo, usersRepo, stuRepo)
 	schoolUC := school.NewUsecase(sqlDB, depRepo, secRepo, subRepo, teaRepo, usersRepo)
+	teacherUC := teacher.NewUsecase(sqlDB, qbRepo, qqRepo, opRepo, teaRepo)
+	examUC := exam.NewUsecase(sqlDB, exRepo, eqRepo, teaRepo, opRepo)
+
 	if err := authUC.SeedSuperAdmin(ctx, "superadmin", envDefault("SEED_SUPERADMIN_PASSWORD", "superadmin123")); err != nil {
 		return nil, err
 	}
-	engine := route.SetupRouter(authUC, superUC, schoolUC, ts)
+	engine := route.SetupRouter(authUC, superUC, schoolUC, teacherUC, examUC, ts)
 	s := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      engine,

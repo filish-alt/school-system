@@ -250,3 +250,14 @@ func (h *Handler) Unassign(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+func (h *Handler) ListAssignedTeachers(c *gin.Context) {
+	var q schooldto.TeacherListQuery
+	_ = c.ShouldBindQuery(&q)
+	out, err := h.UC.ListTeacherAssignments(c, q.Page, q.PageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}

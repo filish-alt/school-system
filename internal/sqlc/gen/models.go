@@ -36,6 +36,7 @@ type Exam struct {
 	EndTime            sql.NullTime   `json:"end_time"`
 	Status             sql.NullString `json:"status"`
 	TotalMarks         sql.NullInt64  `json:"total_marks"`
+	ShuffleOptions     sql.NullInt64  `json:"shuffle_options"`
 }
 
 type ExamQuestion struct {
@@ -116,6 +117,7 @@ type Student struct {
 	StudentCode  sql.NullString `json:"student_code"`
 	FirstName    sql.NullString `json:"first_name"`
 	LastName     sql.NullString `json:"last_name"`
+	Year         sql.NullString `json:"year"`
 	SectionID    sql.NullString `json:"section_id"`
 	DepartmentID sql.NullString `json:"department_id"`
 	UserID       sql.NullString `json:"user_id"`
