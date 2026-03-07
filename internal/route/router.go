@@ -8,9 +8,11 @@ import (
 	hSuper "school-exam/internal/handler/superadmin"
 	hTeacher "school-exam/internal/handler/teacher"
 	hExam "school-exam/internal/handler/exam"
+	hSession "school-exam/internal/handler/exam_session"
 	"school-exam/internal/middleware"
 	"school-exam/internal/module/auth"
 	"school-exam/internal/module/exam"
+	"school-exam/internal/module/exam_session"
 	"school-exam/internal/module/school"
 	"school-exam/internal/module/superadmin"
 	"school-exam/internal/module/teacher"
@@ -19,7 +21,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *school.Usecase, teacherUC *teacher.Usecase, examUC *exam.Usecase, ts security.TokenService) *gin.Engine {
+func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *school.Usecase, teacherUC *teacher.Usecase, examUC *exam.Usecase, sessionUC *exam_session.Usecase, ts security.TokenService) *gin.Engine {
 	r := gin.Default()
 	r.Use(CORSMiddleware())
 	
@@ -104,6 +106,17 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	teacherGroup.POST("/exams/questions", eh.AddQuestions)
 	teacherGroup.POST("/exams/questions/random", eh.AddRandomQuestions)
 	teacherGroup.DELETE("/exams/questions/:id", eh.RemoveQuestion)
+
+	// student routes
+	sessH := hSession.NewHandler(sessionUC)
+	studentGroup := authed.Group("/student")
+	studentGroup.Use(middleware.RequireRoles("student"))
+	{
+		studentGroup.POST("/sessions/start", sessH.StartSession)
+		studentGroup.POST("/sessions/answers", sessH.SaveAnswer)
+		studentGroup.POST("/sessions/submit", sessH.SubmitSession)
+		studentGroup.GET("/sessions/:id", sessH.GetSession)
+	}
 
 	authed.GET("/me", func(c *gin.Context) { c.JSON(200, gin.H{"time": time.Now().UTC()}) })
 	return r

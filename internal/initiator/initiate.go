@@ -11,6 +11,7 @@ import (
 	"school-exam/internal/module/superadmin"
 	"school-exam/internal/module/teacher"
 	"school-exam/internal/module/exam"
+	"school-exam/internal/module/exam_session"
 	"school-exam/internal/repository"
 	"school-exam/internal/route"
 	"school-exam/internal/security"
@@ -47,6 +48,32 @@ func Initiate() (*App, error) {
 	if err := sqlDB.QueryRowContext(ctx, "SELECT COUNT(*) FROM pragma_table_info('exams') WHERE name = 'shuffle_options'").Scan(&colCount); err == nil && colCount == 0 {
 		_, _ = sqlDB.ExecContext(ctx, "ALTER TABLE exams ADD COLUMN shuffle_options INTEGER DEFAULT 0")
 	}
+
+	_, _ = sqlDB.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS exam_sessions (
+		id TEXT PRIMARY KEY,
+		exam_id TEXT,
+		student_id TEXT,
+		start_time DATETIME,
+		end_time DATETIME,
+		status TEXT DEFAULT 'in_progress',
+		total_score INTEGER,
+		FOREIGN KEY (exam_id) REFERENCES exams(id),
+		FOREIGN KEY (student_id) REFERENCES students(id)
+	);`)
+
+	_, _ = sqlDB.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS student_answers (
+		id TEXT PRIMARY KEY,
+		session_id TEXT,
+		question_id TEXT,
+		answer_text TEXT,
+		selected_option_id TEXT,
+		score INTEGER,
+		FOREIGN KEY (session_id) REFERENCES exam_sessions(id),
+		FOREIGN KEY (question_id) REFERENCES questions(id),
+		FOREIGN KEY (selected_option_id) REFERENCES question_options(id),
+		UNIQUE(session_id, question_id)
+	);`)
+
 	usersRepo := repository.NewUserRepository(sqlDB)
 	tenRepo := repository.NewTenantRepository(sqlDB)
 	stuRepo := repository.NewStudentRepository(sqlDB)
@@ -59,6 +86,8 @@ func Initiate() (*App, error) {
 	opRepo := repository.NewOptionRepository(sqlDB)
 	exRepo := repository.NewExamRepository(sqlDB)
 	eqRepo := repository.NewExamQuestionRepository(sqlDB)
+	esRepo := repository.NewExamSessionRepository(sqlDB)
+	saRepo := repository.NewStudentAnswerRepository(sqlDB)
 
 	ts := security.TokenService{Secret: cfg.JWTSecret, TTL: time.Hour * 8}
 	authUC := auth.NewAuthUsecase(usersRepo, ts)
@@ -66,11 +95,12 @@ func Initiate() (*App, error) {
 	schoolUC := school.NewUsecase(sqlDB, depRepo, secRepo, subRepo, teaRepo, usersRepo)
 	teacherUC := teacher.NewUsecase(sqlDB, qbRepo, qqRepo, opRepo, teaRepo)
 	examUC := exam.NewUsecase(sqlDB, exRepo, eqRepo, teaRepo, opRepo)
+	sessionUC := exam_session.NewUsecase(sqlDB, esRepo, saRepo, stuRepo, exRepo)
 
 	if err := authUC.SeedSuperAdmin(ctx, "superadmin", envDefault("SEED_SUPERADMIN_PASSWORD", "superadmin123")); err != nil {
 		return nil, err
 	}
-	engine := route.SetupRouter(authUC, superUC, schoolUC, teacherUC, examUC, ts)
+	engine := route.SetupRouter(authUC, superUC, schoolUC, teacherUC, examUC, sessionUC, ts)
 	s := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      engine,

@@ -49,6 +49,10 @@ func (r *StudentRepository) SetStatus(ctx context.Context, id string, status str
 	})
 }
 
+func (r *StudentRepository) GetByUserID(ctx context.Context, userID string) (q.Student, error) {
+	return r.Queries.GetStudentByUserID(ctx, sql.NullString{String: userID, Valid: true})
+}
+
 func toNullString(s *string) sql.NullString {
 	if s != nil {
 		return sql.NullString{String: *s, Valid: true}

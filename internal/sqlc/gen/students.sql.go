@@ -65,6 +65,29 @@ func (q *Queries) GetStudentByID(ctx context.Context, id string) (Student, error
 	return i, err
 }
 
+const getStudentByUserID = `-- name: GetStudentByUserID :one
+SELECT id, tenant_id, student_code, first_name, last_name, year, section_id, department_id, user_id, status
+FROM students WHERE user_id = ? LIMIT 1
+`
+
+func (q *Queries) GetStudentByUserID(ctx context.Context, userID sql.NullString) (Student, error) {
+	row := q.db.QueryRowContext(ctx, getStudentByUserID, userID)
+	var i Student
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.StudentCode,
+		&i.FirstName,
+		&i.LastName,
+		&i.Year,
+		&i.SectionID,
+		&i.DepartmentID,
+		&i.UserID,
+		&i.Status,
+	)
+	return i, err
+}
+
 const listByTenant = `-- name: ListByTenant :many
 SELECT id, tenant_id, student_code, first_name, last_name, year, section_id, department_id, user_id, status
 FROM students WHERE tenant_id = ? ORDER BY last_name, first_name LIMIT ? OFFSET ?

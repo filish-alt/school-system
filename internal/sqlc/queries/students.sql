@@ -15,3 +15,7 @@ UPDATE students SET first_name = ?, last_name = ?, year = ?, section_id = ?, dep
 
 -- name: SetStudentStatus :exec
 UPDATE students SET status = ? WHERE id = ?;
+
+-- name: GetStudentByUserID :one
+SELECT id, tenant_id, student_code, first_name, last_name, year, section_id, department_id, user_id, status
+FROM students WHERE user_id = ? LIMIT 1;
