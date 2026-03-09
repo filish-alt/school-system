@@ -100,6 +100,7 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	teacherGroup.POST("/exams", eh.CreateExam)
 	teacherGroup.GET("/exams", eh.ListExams)
 	teacherGroup.GET("/exams/:id", eh.GetExam)
+	teacherGroup.GET("/exams/:id/questions", eh.GetTeacherExamQuestions)
 	teacherGroup.PATCH("/exams", eh.UpdateExam)
 	teacherGroup.PATCH("/exams/:id/status", eh.UpdateStatus)
 	teacherGroup.DELETE("/exams/:id", eh.DeleteExam)

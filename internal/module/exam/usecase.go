@@ -88,7 +88,25 @@ func (u *Usecase) GetExam(ctx context.Context, id string) (examdto.GetExamRespon
 	if err != nil {
 		return examdto.GetExamResponse{}, err
 	}
-	return u.getExamDetail(ctx, exam)
+	return u.getExamDetail(ctx, exam, true)
+}
+
+func (u *Usecase) GetTeacherExamQuestions(ctx context.Context, id string) (examdto.GetExamResponse, error) {
+	teacherID, _, err := u.teacherInfo(ctx)
+	if err != nil {
+		return examdto.GetExamResponse{}, err
+	}
+
+	exam, err := u.ExamRepo.Get(ctx, id)
+	if err != nil {
+		return examdto.GetExamResponse{}, err
+	}
+
+	if exam.CreatedByTeacherID.String != teacherID {
+		return examdto.GetExamResponse{}, fmt.Errorf("you are not authorized to view questions for this exam")
+	}
+
+	return u.getExamDetail(ctx, exam, true)
 }
 
 func (u *Usecase) GetStudentExam(ctx context.Context, id string) (examdto.GetExamResponse, error) {
@@ -120,10 +138,10 @@ func (u *Usecase) GetStudentExam(ctx context.Context, id string) (examdto.GetExa
 		return examdto.GetExamResponse{}, fmt.Errorf("exam is not published")
 	}
 
-	return u.getExamDetail(ctx, exam)
+	return u.getExamDetail(ctx, exam, false)
 }
 
-func (u *Usecase) getExamDetail(ctx context.Context, exam q.Exam) (examdto.GetExamResponse, error) {
+func (u *Usecase) getExamDetail(ctx context.Context, exam q.Exam, isTeacher bool) (examdto.GetExamResponse, error) {
 	rows, err := u.EQRepo.List(ctx, exam.ID)
 	if err != nil {
 		return examdto.GetExamResponse{}, err
@@ -133,6 +151,12 @@ func (u *Usecase) getExamDetail(ctx context.Context, exam q.Exam) (examdto.GetEx
 	for _, r := range rows {
 		options, _ := u.OptionRepo.ListByQuestion(ctx, valueOrEmpty(r.QuestionID), 100, 0)
 		
+		if !isTeacher {
+			for i := range options {
+				options[i].IsCorrect = sql.NullInt64{Int64: 0, Valid: false}
+			}
+		}
+
 		if exam.ShuffleOptions.Valid && exam.ShuffleOptions.Int64 == 1 {
 			shuffleOptions(options)
 		}

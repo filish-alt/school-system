@@ -40,6 +40,16 @@ func (h *Handler) GetExam(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
+func (h *Handler) GetTeacherExamQuestions(c *gin.Context) {
+	id := c.Param("id")
+	out, err := h.UC.GetTeacherExamQuestions(c, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 func (h *Handler) ListExams(c *gin.Context) {
 	var q examdto.ListQuery
 	_ = c.ShouldBindQuery(&q)
