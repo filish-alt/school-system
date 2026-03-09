@@ -51,6 +51,25 @@ func (h *Handler) ListExams(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
+func (h *Handler) ListStudentExams(c *gin.Context) {
+	out, err := h.UC.ListStudentExams(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *Handler) GetStudentExam(c *gin.Context) {
+	id := c.Param("id")
+	out, err := h.UC.GetStudentExam(c, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 func (h *Handler) UpdateExam(c *gin.Context) {
 	var req examdto.UpdateExamRequest
 	if err := c.BindJSON(&req); err != nil {

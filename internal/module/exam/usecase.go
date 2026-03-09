@@ -19,15 +19,17 @@ type Usecase struct {
 	ExamRepo    *repository.ExamRepository
 	EQRepo      *repository.ExamQuestionRepository
 	TeacherRepo *repository.TeacherRepository
+	StudentRepo *repository.StudentRepository
 	OptionRepo  *repository.OptionRepository
 	Queries     *q.Queries
 }
 
-func NewUsecase(db *sql.DB, examRepo *repository.ExamRepository, eqRepo *repository.ExamQuestionRepository, teacherRepo *repository.TeacherRepository, optionRepo *repository.OptionRepository) *Usecase {
+func NewUsecase(db *sql.DB, examRepo *repository.ExamRepository, eqRepo *repository.ExamQuestionRepository, teacherRepo *repository.TeacherRepository, studentRepo *repository.StudentRepository, optionRepo *repository.OptionRepository) *Usecase {
 	return &Usecase{
 		ExamRepo:    examRepo,
 		EQRepo:      eqRepo,
 		TeacherRepo: teacherRepo,
+		StudentRepo: studentRepo,
 		OptionRepo:  optionRepo,
 		Queries:     q.New(db),
 	}
@@ -68,12 +70,12 @@ func (u *Usecase) CreateExam(ctx context.Context, req examdto.CreateExamRequest)
 		ID:                 id,
 		TenantID:           sql.NullString{String: tenantID, Valid: tenantID != ""},
 		Title:              sql.NullString{String: req.Title, Valid: true},
-		SubjectID:          sql.NullString{String: req.SubjectID, Valid: true},
-		SectionID:          sql.NullString{String: req.SectionID, Valid: true},
+		SubjectID:          req.SubjectID,
+		SectionID:          req.SectionID,
 		CreatedByTeacherID: sql.NullString{String: teacherID, Valid: true},
-		DurationMinutes:    sql.NullInt64{Int64: req.DurationMinutes, Valid: true},
-		StartTime:          sql.NullTime{Time: req.StartTime, Valid: true},
-		EndTime:            sql.NullTime{Time: req.EndTime, Valid: true},
+		DurationMinutes:    req.DurationMinutes,
+		StartTime:          req.StartTime,
+		EndTime:            req.EndTime,
 		Status:             sql.NullString{String: "draft", Valid: true},
 		TotalMarks:         sql.NullInt64{Int64: 0, Valid: true},
 		ShuffleOptions:    sql.NullInt64{Int64: 0, Valid: true},
@@ -86,8 +88,43 @@ func (u *Usecase) GetExam(ctx context.Context, id string) (examdto.GetExamRespon
 	if err != nil {
 		return examdto.GetExamResponse{}, err
 	}
+	return u.getExamDetail(ctx, exam)
+}
 
-	rows, err := u.EQRepo.List(ctx, id)
+func (u *Usecase) GetStudentExam(ctx context.Context, id string) (examdto.GetExamResponse, error) {
+	c, ok := ctx.(*gin.Context)
+	if !ok {
+		return examdto.GetExamResponse{}, fmt.Errorf("invalid context")
+	}
+	v, ok := c.Get("claims")
+	if !ok {
+		return examdto.GetExamResponse{}, fmt.Errorf("claims missing")
+	}
+	claims := v.(*security.Claims)
+
+	student, err := u.StudentRepo.GetByUserID(ctx, claims.UserID)
+	if err != nil {
+		return examdto.GetExamResponse{}, err
+	}
+
+	exam, err := u.ExamRepo.Get(ctx, id)
+	if err != nil {
+		return examdto.GetExamResponse{}, err
+	}
+
+	if exam.SectionID != student.SectionID.String {
+		return examdto.GetExamResponse{}, fmt.Errorf("this exam is not for your section")
+	}
+
+	if exam.Status.String != "published" {
+		return examdto.GetExamResponse{}, fmt.Errorf("exam is not published")
+	}
+
+	return u.getExamDetail(ctx, exam)
+}
+
+func (u *Usecase) getExamDetail(ctx context.Context, exam q.Exam) (examdto.GetExamResponse, error) {
+	rows, err := u.EQRepo.List(ctx, exam.ID)
 	if err != nil {
 		return examdto.GetExamResponse{}, err
 	}
@@ -127,6 +164,29 @@ func (u *Usecase) ListExams(ctx context.Context, page, pageSize int64) ([]q.Exam
 	return u.ExamRepo.ListByTeacher(ctx, teacherID, limit, offset)
 }
 
+func (u *Usecase) ListStudentExams(ctx context.Context) ([]q.Exam, error) {
+	c, ok := ctx.(*gin.Context)
+	if !ok {
+		return nil, fmt.Errorf("invalid context")
+	}
+	v, ok := c.Get("claims")
+	if !ok {
+		return nil, fmt.Errorf("claims missing")
+	}
+	claims := v.(*security.Claims)
+	
+	student, err := u.StudentRepo.GetByUserID(ctx, claims.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	if !student.SectionID.Valid {
+		return nil, fmt.Errorf("student section not found")
+	}
+
+	return u.ExamRepo.ListPublishedBySection(ctx, student.SectionID.String)
+}
+
 func (u *Usecase) UpdateExam(ctx context.Context, req examdto.UpdateExamRequest) error {
 	exam, err := u.ExamRepo.Get(ctx, req.ID)
 	if err != nil {
@@ -136,11 +196,11 @@ func (u *Usecase) UpdateExam(ctx context.Context, req examdto.UpdateExamRequest)
 	params := q.UpdateExamParams{
 		ID:              req.ID,
 		Title:           toNullString(req.Title, exam.Title),
-		SubjectID:       toNullString(req.SubjectID, exam.SubjectID),
-		SectionID:       toNullString(req.SectionID, exam.SectionID),
-		DurationMinutes: toNullInt(req.DurationMinutes, exam.DurationMinutes),
-		StartTime:       toNullTime(req.StartTime, exam.StartTime),
-		EndTime:         toNullTime(req.EndTime, exam.EndTime),
+		SubjectID:       valueOrOldString(req.SubjectID, exam.SubjectID),
+		SectionID:       valueOrOldString(req.SectionID, exam.SectionID),
+		DurationMinutes: valueOrOldInt(req.DurationMinutes, exam.DurationMinutes),
+		StartTime:       valueOrOldTime(req.StartTime, exam.StartTime),
+		EndTime:         valueOrOldTime(req.EndTime, exam.EndTime),
 		ShuffleOptions:  toNullBoolInt(req.ShuffleOptions, exam.ShuffleOptions),
 	}
 
@@ -268,6 +328,27 @@ func toNullBoolInt(b *bool, old sql.NullInt64) sql.NullInt64 {
 			val = 1
 		}
 		return sql.NullInt64{Int64: val, Valid: true}
+	}
+	return old
+}
+
+func valueOrOldString(s *string, old string) string {
+	if s != nil {
+		return *s
+	}
+	return old
+}
+
+func valueOrOldInt(i *int64, old int64) int64 {
+	if i != nil {
+		return *i
+	}
+	return old
+}
+
+func valueOrOldTime(t *time.Time, old time.Time) time.Time {
+	if t != nil {
+		return *t
 	}
 	return old
 }

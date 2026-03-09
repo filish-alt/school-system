@@ -82,21 +82,27 @@ func (u *Usecase) CreateQuestion(ctx context.Context, req teacherdto.CreateQuest
 		QuestionBankID: sql.NullString{String: req.QuestionBankID, Valid: true},
 		Type:           sql.NullString{String: req.Type, Valid: true},
 		QuestionText:   sql.NullString{String: req.QuestionText, Valid: true},
-		Marks:          toNullInt(req.Marks),
-		DifficultyLevel: toNullString(req.Difficulty),
+		Marks:          toNullInt64Simple(req.Marks),
+		DifficultyLevel: toNullStringSimple(req.Difficulty),
 	})
 }
 
 func (u *Usecase) UpdateQuestion(ctx context.Context, req teacherdto.UpdateQuestionRequest) error {
+	existing, err := u.Questions.Get(ctx, req.ID)
+	if err != nil {
+		return fmt.Errorf("question not found: %w", err)
+	}
+
 	if req.Type != nil && !validQuestionType(*req.Type) {
 		return fmt.Errorf("invalid question type")
 	}
+
 	return u.Questions.Update(ctx, q.UpdateQuestionParams{
 		ID:             req.ID,
-		Type:           toNullString(req.Type),
-		QuestionText:   toNullString(req.QuestionText),
-		Marks:          toNullInt(req.Marks),
-		DifficultyLevel: toNullString(req.Difficulty),
+		Type:           toNullString(req.Type, existing.Type),
+		QuestionText:   toNullString(req.QuestionText, existing.QuestionText),
+		Marks:          toNullInt64(req.Marks, existing.Marks),
+		DifficultyLevel: toNullStringWithDefault(req.Difficulty, existing.DifficultyLevel),
 	})
 }
 
@@ -111,21 +117,36 @@ func (u *Usecase) ListQuestions(ctx context.Context, bankID string, page, pageSi
 
 func (u *Usecase) CreateOption(ctx context.Context, req teacherdto.CreateOptionRequest) (string, error) {
 	id := uuid.New().String()
+	
+	if req.IsCorrect {
+		_ = u.Options.ResetCorrectOptions(ctx, req.QuestionID, id)
+	}
+
 	return id, u.Options.Create(ctx, q.CreateOptionParams{
 		ID:         id,
 		QuestionID: sql.NullString{String: req.QuestionID, Valid: true},
 		OptionText: sql.NullString{String: req.OptionText, Valid: true},
-		IsCorrect:  toNullBool(&req.IsCorrect),
+		IsCorrect:  toNullBoolSimple(req.IsCorrect),
 	})
 }
 
 func (u *Usecase) UpdateOption(ctx context.Context, req teacherdto.UpdateOptionRequest) error {
+	existing, err := u.Options.Get(ctx, req.ID)
+	if err != nil {
+		return fmt.Errorf("option not found: %w", err)
+	}
+
+	if req.IsCorrect != nil && *req.IsCorrect {
+		_ = u.Options.ResetCorrectOptions(ctx, existing.QuestionID.String, req.ID)
+	}
+
 	return u.Options.Update(ctx, q.UpdateOptionParams{
 		ID:         req.ID,
-		OptionText: toNullString(req.OptionText),
-		IsCorrect:  toNullBool(req.IsCorrect),
+		OptionText: toNullString(req.OptionText, existing.OptionText),
+		IsCorrect:  toNullBoolOpt(req.IsCorrect, existing.IsCorrect),
 	})
 }
+
 
 func (u *Usecase) DeleteOption(ctx context.Context, id string) error {
 	return u.Options.Delete(ctx, id)
@@ -240,28 +261,58 @@ func normalize(page, pageSize int64) (int64, int64) {
 	return pageSize, (page - 1) * pageSize
 }
 
-func toNullString(s *string) sql.NullString {
+func toNullString(s *string, old sql.NullString) sql.NullString {
+	if s != nil {
+		return sql.NullString{String: *s, Valid: true}
+	}
+	return old
+}
+
+func toNullStringSimple(s *string) sql.NullString {
 	if s != nil {
 		return sql.NullString{String: *s, Valid: true}
 	}
 	return sql.NullString{}
 }
 
-func toNullInt(i *int64) sql.NullInt64 {
+func toNullStringWithDefault(s *string, old sql.NullString) sql.NullString {
+	if s != nil {
+		return sql.NullString{String: *s, Valid: true}
+	}
+	return old
+}
+
+func toNullInt64(i *int64, old sql.NullInt64) sql.NullInt64 {
+	if i != nil {
+		return sql.NullInt64{Int64: *i, Valid: true}
+	}
+	return old
+}
+
+func toNullInt64Simple(i *int64) sql.NullInt64 {
 	if i != nil {
 		return sql.NullInt64{Int64: *i, Valid: true}
 	}
 	return sql.NullInt64{}
 }
 
-func toNullBool(b *bool) sql.NullInt64 {
+func toNullBoolOpt(b *bool, old sql.NullInt64) sql.NullInt64 {
 	if b != nil {
+		val := int64(0)
 		if *b {
-			return sql.NullInt64{Int64: 1, Valid: true}
+			val = 1
 		}
-		return sql.NullInt64{Int64: 0, Valid: true}
+		return sql.NullInt64{Int64: val, Valid: true}
 	}
-	return sql.NullInt64{}
+	return old
+}
+
+func toNullBoolSimple(b bool) sql.NullInt64 {
+	val := int64(0)
+	if b {
+		val = 1
+	}
+	return sql.NullInt64{Int64: val, Valid: true}
 }
 
 func validQuestionType(t string) bool {

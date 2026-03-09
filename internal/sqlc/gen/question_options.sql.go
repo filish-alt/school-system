@@ -94,6 +94,20 @@ func (q *Queries) ListOptionsByQuestion(ctx context.Context, arg ListOptionsByQu
 	return items, nil
 }
 
+const resetCorrectOptions = `-- name: ResetCorrectOptions :exec
+UPDATE question_options SET is_correct = 0 WHERE question_id = ? AND id != ?
+`
+
+type ResetCorrectOptionsParams struct {
+	QuestionID sql.NullString `json:"question_id"`
+	ID         string         `json:"id"`
+}
+
+func (q *Queries) ResetCorrectOptions(ctx context.Context, arg ResetCorrectOptionsParams) error {
+	_, err := q.db.ExecContext(ctx, resetCorrectOptions, arg.QuestionID, arg.ID)
+	return err
+}
+
 const updateOption = `-- name: UpdateOption :exec
 UPDATE question_options SET option_text = ?, is_correct = ? WHERE id = ?
 `

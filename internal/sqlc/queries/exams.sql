@@ -27,3 +27,7 @@ UPDATE exams SET total_marks = (SELECT COALESCE(SUM(marks), 0) FROM exam_questio
 
 -- name: DeleteExam :exec
 DELETE FROM exams WHERE id = ?;
+
+-- name: ListPublishedExamsBySection :many
+SELECT id, tenant_id, title, subject_id, section_id, created_by_teacher_id, duration_minutes, start_time, end_time, status, total_marks, shuffle_options
+FROM exams WHERE section_id = ? AND status = 'published' ORDER BY start_time ASC;

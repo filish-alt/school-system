@@ -13,3 +13,5 @@ UPDATE question_options SET option_text = ?, is_correct = ? WHERE id = ?;
 -- name: DeleteOption :exec
 DELETE FROM question_options WHERE id = ?;
 
+-- name: ResetCorrectOptions :exec
+UPDATE question_options SET is_correct = 0 WHERE question_id = ? AND id != ?;

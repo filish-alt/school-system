@@ -72,7 +72,7 @@ func (u *Usecase) StartSession(ctx context.Context, req sessiondto.StartSessionR
 
 	id := uuid.New().String()
 	now := time.Now().UTC()
-	duration := time.Duration(exam.DurationMinutes.Int64) * time.Minute
+	duration := time.Duration(exam.DurationMinutes) * time.Minute
 	endTime := now.Add(duration)
 
 	err = u.SessionRepo.Create(ctx, q.CreateExamSessionParams{

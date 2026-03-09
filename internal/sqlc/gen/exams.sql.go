@@ -8,6 +8,7 @@ package queries
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createExam = `-- name: CreateExam :exec
@@ -19,12 +20,12 @@ type CreateExamParams struct {
 	ID                 string         `json:"id"`
 	TenantID           sql.NullString `json:"tenant_id"`
 	Title              sql.NullString `json:"title"`
-	SubjectID          sql.NullString `json:"subject_id"`
-	SectionID          sql.NullString `json:"section_id"`
+	SubjectID          string         `json:"subject_id"`
+	SectionID          string         `json:"section_id"`
 	CreatedByTeacherID sql.NullString `json:"created_by_teacher_id"`
-	DurationMinutes    sql.NullInt64  `json:"duration_minutes"`
-	StartTime          sql.NullTime   `json:"start_time"`
-	EndTime            sql.NullTime   `json:"end_time"`
+	DurationMinutes    int64          `json:"duration_minutes"`
+	StartTime          time.Time      `json:"start_time"`
+	EndTime            time.Time      `json:"end_time"`
 	Status             sql.NullString `json:"status"`
 	TotalMarks         sql.NullInt64  `json:"total_marks"`
 	ShuffleOptions     sql.NullInt64  `json:"shuffle_options"`
@@ -88,9 +89,9 @@ FROM exams WHERE section_id = ? ORDER BY rowid DESC LIMIT ? OFFSET ?
 `
 
 type ListExamsBySectionParams struct {
-	SectionID sql.NullString `json:"section_id"`
-	Limit     int64          `json:"limit"`
-	Offset    int64          `json:"offset"`
+	SectionID string `json:"section_id"`
+	Limit     int64  `json:"limit"`
+	Offset    int64  `json:"offset"`
 }
 
 func (q *Queries) ListExamsBySection(ctx context.Context, arg ListExamsBySectionParams) ([]Exam, error) {
@@ -176,6 +177,47 @@ func (q *Queries) ListExamsByTeacher(ctx context.Context, arg ListExamsByTeacher
 	return items, nil
 }
 
+const listPublishedExamsBySection = `-- name: ListPublishedExamsBySection :many
+SELECT id, tenant_id, title, subject_id, section_id, created_by_teacher_id, duration_minutes, start_time, end_time, status, total_marks, shuffle_options
+FROM exams WHERE section_id = ? AND status = 'published' ORDER BY start_time ASC
+`
+
+func (q *Queries) ListPublishedExamsBySection(ctx context.Context, sectionID string) ([]Exam, error) {
+	rows, err := q.db.QueryContext(ctx, listPublishedExamsBySection, sectionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Exam
+	for rows.Next() {
+		var i Exam
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Title,
+			&i.SubjectID,
+			&i.SectionID,
+			&i.CreatedByTeacherID,
+			&i.DurationMinutes,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Status,
+			&i.TotalMarks,
+			&i.ShuffleOptions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateExam = `-- name: UpdateExam :exec
 UPDATE exams
 SET title = ?, subject_id = ?, section_id = ?, duration_minutes = ?, start_time = ?, end_time = ?, shuffle_options = ?
@@ -184,11 +226,11 @@ WHERE id = ?
 
 type UpdateExamParams struct {
 	Title           sql.NullString `json:"title"`
-	SubjectID       sql.NullString `json:"subject_id"`
-	SectionID       sql.NullString `json:"section_id"`
-	DurationMinutes sql.NullInt64  `json:"duration_minutes"`
-	StartTime       sql.NullTime   `json:"start_time"`
-	EndTime         sql.NullTime   `json:"end_time"`
+	SubjectID       string         `json:"subject_id"`
+	SectionID       string         `json:"section_id"`
+	DurationMinutes int64          `json:"duration_minutes"`
+	StartTime       time.Time      `json:"start_time"`
+	EndTime         time.Time      `json:"end_time"`
 	ShuffleOptions  sql.NullInt64  `json:"shuffle_options"`
 	ID              string         `json:"id"`
 }

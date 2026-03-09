@@ -33,10 +33,14 @@ func (r *ExamRepository) ListByTeacher(ctx context.Context, teacherID string, li
 
 func (r *ExamRepository) ListBySection(ctx context.Context, sectionID string, limit, offset int64) ([]q.Exam, error) {
 	return r.Queries.ListExamsBySection(ctx, q.ListExamsBySectionParams{
-		SectionID: sql.NullString{String: sectionID, Valid: true},
+		SectionID: sectionID,
 		Limit:     limit,
 		Offset:    offset,
 	})
+}
+
+func (r *ExamRepository) ListPublishedBySection(ctx context.Context, sectionID string) ([]q.Exam, error) {
+	return r.Queries.ListPublishedExamsBySection(ctx, sectionID)
 }
 
 func (r *ExamRepository) Update(ctx context.Context, p q.UpdateExamParams) error {

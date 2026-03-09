@@ -94,7 +94,7 @@ func Initiate() (*App, error) {
 	superUC := superadmin.NewUsecase(tenRepo, usersRepo, stuRepo)
 	schoolUC := school.NewUsecase(sqlDB, depRepo, secRepo, subRepo, teaRepo, usersRepo)
 	teacherUC := teacher.NewUsecase(sqlDB, qbRepo, qqRepo, opRepo, teaRepo)
-	examUC := exam.NewUsecase(sqlDB, exRepo, eqRepo, teaRepo, opRepo)
+	examUC := exam.NewUsecase(sqlDB, exRepo, eqRepo, teaRepo, stuRepo, opRepo)
 	sessionUC := exam_session.NewUsecase(sqlDB, esRepo, saRepo, stuRepo, exRepo)
 
 	if err := authUC.SeedSuperAdmin(ctx, "superadmin", envDefault("SEED_SUPERADMIN_PASSWORD", "superadmin123")); err != nil {

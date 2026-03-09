@@ -19,6 +19,10 @@ func (r *QuestionRepository) Create(ctx context.Context, p q.CreateQuestionParam
 	return r.Queries.CreateQuestion(ctx, p)
 }
 
+func (r *QuestionRepository) Get(ctx context.Context, id string) (q.Question, error) {
+	return r.Queries.GetQuestion(ctx, id)
+}
+
 func (r *QuestionRepository) Update(ctx context.Context, p q.UpdateQuestionParams) error {
 	return r.Queries.UpdateQuestion(ctx, p)
 }

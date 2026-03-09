@@ -6,6 +6,7 @@ package queries
 
 import (
 	"database/sql"
+	"time"
 )
 
 type AuditLog struct {
@@ -28,12 +29,12 @@ type Exam struct {
 	ID                 string         `json:"id"`
 	TenantID           sql.NullString `json:"tenant_id"`
 	Title              sql.NullString `json:"title"`
-	SubjectID          sql.NullString `json:"subject_id"`
-	SectionID          sql.NullString `json:"section_id"`
+	SubjectID          string         `json:"subject_id"`
+	SectionID          string         `json:"section_id"`
 	CreatedByTeacherID sql.NullString `json:"created_by_teacher_id"`
-	DurationMinutes    sql.NullInt64  `json:"duration_minutes"`
-	StartTime          sql.NullTime   `json:"start_time"`
-	EndTime            sql.NullTime   `json:"end_time"`
+	DurationMinutes    int64          `json:"duration_minutes"`
+	StartTime          time.Time      `json:"start_time"`
+	EndTime            time.Time      `json:"end_time"`
 	Status             sql.NullString `json:"status"`
 	TotalMarks         sql.NullInt64  `json:"total_marks"`
 	ShuffleOptions     sql.NullInt64  `json:"shuffle_options"`

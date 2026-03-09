@@ -133,12 +133,12 @@ CREATE TABLE exams (
     id TEXT PRIMARY KEY,
     tenant_id TEXT,
     title TEXT,
-    subject_id TEXT,
-    section_id TEXT,
+    subject_id TEXT NOT NULL,
+    section_id TEXT NOT NULL,
     created_by_teacher_id TEXT,
-    duration_minutes INTEGER,
-    start_time DATETIME,
-    end_time DATETIME,
+    duration_minutes INTEGER NOT NULL,
+    start_time DATETIME NOT NULL,
+    end_time DATETIME NOT NULL,
     status TEXT DEFAULT 'draft',
     total_marks INTEGER,
     shuffle_options INTEGER DEFAULT 0,
@@ -180,8 +180,11 @@ CREATE TABLE student_answers (
     FOREIGN KEY (session_id) REFERENCES exam_sessions(id),
     FOREIGN KEY (question_id) REFERENCES questions(id),
     FOREIGN KEY (selected_option_id) REFERENCES question_options(id)
+
 );
 
+CREATE UNIQUE INDEX idx_student_answer_unique
+ON student_answers(session_id, question_id);
 
 CREATE TABLE results (
     id TEXT PRIMARY KEY,

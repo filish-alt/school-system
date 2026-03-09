@@ -112,6 +112,8 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	studentGroup := authed.Group("/student")
 	studentGroup.Use(middleware.RequireRoles("student"))
 	{
+		studentGroup.GET("/exams", eh.ListStudentExams)
+		studentGroup.GET("/exams/:id", eh.GetStudentExam)
 		studentGroup.POST("/sessions/start", sessH.StartSession)
 		studentGroup.POST("/sessions/answers", sessH.SaveAnswer)
 		studentGroup.POST("/sessions/submit", sessH.SubmitSession)
