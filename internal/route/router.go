@@ -115,10 +115,12 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	{
 		studentGroup.GET("/exams", eh.ListStudentExams)
 		studentGroup.GET("/exams/:id", eh.GetStudentExam)
+		studentGroup.GET("/sessions", sessH.ListMySessions)
 		studentGroup.POST("/sessions/start", sessH.StartSession)
 		studentGroup.POST("/sessions/answers", sessH.SaveAnswer)
 		studentGroup.POST("/sessions/submit", sessH.SubmitSession)
 		studentGroup.GET("/sessions/:id", sessH.GetSession)
+		studentGroup.GET("/sessions/:id/result", sessH.GetSessionResult)
 	}
 
 	authed.GET("/me", func(c *gin.Context) { c.JSON(200, gin.H{"time": time.Now().UTC()}) })

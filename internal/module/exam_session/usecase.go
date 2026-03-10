@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	sessiondto "school-exam/internal/dto/student"
+	studentdto "school-exam/internal/dto/student"
 	"school-exam/internal/repository"
 	q "school-exam/internal/sqlc/gen"
 	"school-exam/internal/security"
@@ -19,15 +19,19 @@ type Usecase struct {
 	AnswerRepo  *repository.StudentAnswerRepository
 	StudentRepo *repository.StudentRepository
 	ExamRepo    *repository.ExamRepository
+	QuestionRepo *repository.QuestionRepository
+	OptionRepo  *repository.OptionRepository
 	Queries     *q.Queries
 }
 
-func NewUsecase(db *sql.DB, sRepo *repository.ExamSessionRepository, aRepo *repository.StudentAnswerRepository, stuRepo *repository.StudentRepository, eRepo *repository.ExamRepository) *Usecase {
+func NewUsecase(db *sql.DB, sRepo *repository.ExamSessionRepository, aRepo *repository.StudentAnswerRepository, stuRepo *repository.StudentRepository, eRepo *repository.ExamRepository, qRepo *repository.QuestionRepository, oRepo *repository.OptionRepository) *Usecase {
 	return &Usecase{
 		SessionRepo: sRepo,
 		AnswerRepo:  aRepo,
 		StudentRepo: stuRepo,
 		ExamRepo:    eRepo,
+		QuestionRepo: qRepo,
+		OptionRepo:  oRepo,
 		Queries:     q.New(db),
 	}
 }
@@ -49,7 +53,7 @@ func (u *Usecase) studentInfo(ctx context.Context) (string, error) {
 	return s.ID, nil
 }
 
-func (u *Usecase) StartSession(ctx context.Context, req sessiondto.StartSessionRequest) (string, error) {
+func (u *Usecase) StartSession(ctx context.Context, req studentdto.StartSessionRequest) (string, error) {
 	studentID, err := u.studentInfo(ctx)
 	if err != nil {
 		return "", err
@@ -87,7 +91,7 @@ func (u *Usecase) StartSession(ctx context.Context, req sessiondto.StartSessionR
 	return id, err
 }
 
-func (u *Usecase) SaveAnswer(ctx context.Context, req sessiondto.SaveAnswerRequest) error {
+func (u *Usecase) SaveAnswer(ctx context.Context, req studentdto.SaveAnswerRequest) error {
 	session, err := u.SessionRepo.Get(ctx, req.SessionID)
 	if err != nil {
 		return err
@@ -153,6 +157,16 @@ func (u *Usecase) SubmitSession(ctx context.Context, sessionID string) error {
 				SelectedOptionID: ans.SelectedOptionID,
 				Score:            sql.NullInt64{Int64: marks, Valid: true},
 			})
+		} else {
+			// Ensure score is 0 if incorrect
+			_ = u.AnswerRepo.Upsert(ctx, q.UpsertStudentAnswerParams{
+				ID:               ans.ID,
+				SessionID:        ans.SessionID,
+				QuestionID:       ans.QuestionID,
+				AnswerText:       ans.AnswerText,
+				SelectedOptionID: ans.SelectedOptionID,
+				Score:            sql.NullInt64{Int64: 0, Valid: true},
+			})
 		}
 	}
 
@@ -163,6 +177,67 @@ func (u *Usecase) SubmitSession(ctx context.Context, sessionID string) error {
 	})
 }
 
+func (u *Usecase) GetSessionResult(ctx context.Context, sessionID string) (studentdto.ExamResultResponse, error) {
+	studentID, err := u.studentInfo(ctx)
+	if err != nil {
+		return studentdto.ExamResultResponse{}, err
+	}
+
+	session, err := u.SessionRepo.Get(ctx, sessionID)
+	if err != nil {
+		return studentdto.ExamResultResponse{}, err
+	}
+
+	if session.StudentID.String != studentID {
+		return studentdto.ExamResultResponse{}, fmt.Errorf("unauthorized access to session")
+	}
+
+	exam, err := u.ExamRepo.Get(ctx, session.ExamID.String)
+	if err != nil {
+		return studentdto.ExamResultResponse{}, err
+	}
+
+	answers, err := u.AnswerRepo.ListBySession(ctx, sessionID)
+	if err != nil {
+		return studentdto.ExamResultResponse{}, err
+	}
+
+	var breakdown []studentdto.AnswerReviewDetail
+	for _, ans := range answers {
+		question, _ := u.QuestionRepo.Get(ctx, ans.QuestionID.String)
+		options, _ := u.OptionRepo.ListByQuestion(ctx, ans.QuestionID.String, 100, 0)
+		correctOptionID, _ := u.AnswerRepo.GetCorrectOption(ctx, ans.QuestionID.String)
+		maxMarks, _ := u.AnswerRepo.GetQuestionMarks(ctx, exam.ID, ans.QuestionID.String)
+
+		isCorrect := ans.SelectedOptionID.Valid && ans.SelectedOptionID.String == correctOptionID
+
+		breakdown = append(breakdown, studentdto.AnswerReviewDetail{
+			QuestionID:       ans.QuestionID.String,
+			QuestionText:     question.QuestionText.String,
+			QuestionType:     question.Type.String,
+			SelectedOptionID: ans.SelectedOptionID.String,
+			CorrectOptionID:  correctOptionID,
+			IsCorrect:        isCorrect,
+			Score:            ans.Score.Int64,
+			MaxMarks:         maxMarks,
+			Options:          options,
+		})
+	}
+
+	return studentdto.ExamResultResponse{
+		Summary: studentdto.ResultSummaryResponse{
+			SessionID:  session.ID,
+			ExamID:     exam.ID,
+			ExamTitle:  exam.Title.String,
+			TotalScore: session.TotalScore.Int64,
+			Status:     session.Status.String,
+			StartTime:  session.StartTime.Time,
+			EndTime:    session.EndTime.Time,
+		},
+		Breakdown: breakdown,
+	}, nil
+}
+
 func (u *Usecase) GetSession(ctx context.Context, id string) (q.ExamSession, error) {
 	session, err := u.SessionRepo.Get(ctx, id)
 	if err == nil && session.Status.String == "in_progress" && time.Now().UTC().After(session.EndTime.Time) {
@@ -170,6 +245,32 @@ func (u *Usecase) GetSession(ctx context.Context, id string) (q.ExamSession, err
 		session.Status.String = "timed_out"
 	}
 	return session, err
+}
+
+func (u *Usecase) ListMySessions(ctx context.Context) ([]studentdto.SessionResponse, error) {
+	studentID, err := u.studentInfo(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sessions, err := u.SessionRepo.ListByStudent(ctx, studentID)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []studentdto.SessionResponse
+	for _, s := range sessions {
+		res = append(res, studentdto.SessionResponse{
+			ID:         s.ID,
+			ExamID:     s.ExamID.String,
+			StudentID:  s.StudentID.String,
+			StartTime:  s.StartTime.Time,
+			EndTime:    s.EndTime.Time,
+			Status:     s.Status.String,
+			TotalScore: s.TotalScore.Int64,
+		})
+	}
+	return res, nil
 }
 
 func toNullString(s *string) sql.NullString {

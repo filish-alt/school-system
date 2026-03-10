@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	sessiondto "school-exam/internal/dto/student"
+	studentdto "school-exam/internal/dto/student"
 	m "school-exam/internal/module/exam_session"
 )
 
@@ -17,7 +17,7 @@ func NewHandler(uc *m.Usecase) *Handler {
 }
 
 func (h *Handler) StartSession(c *gin.Context) {
-	var req sessiondto.StartSessionRequest
+	var req studentdto.StartSessionRequest
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
@@ -31,7 +31,7 @@ func (h *Handler) StartSession(c *gin.Context) {
 }
 
 func (h *Handler) SaveAnswer(c *gin.Context) {
-	var req sessiondto.SaveAnswerRequest
+	var req studentdto.SaveAnswerRequest
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
@@ -44,7 +44,7 @@ func (h *Handler) SaveAnswer(c *gin.Context) {
 }
 
 func (h *Handler) SubmitSession(c *gin.Context) {
-	var req sessiondto.SubmitSessionRequest
+	var req studentdto.SubmitSessionRequest
 	if err := c.BindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
@@ -59,6 +59,25 @@ func (h *Handler) SubmitSession(c *gin.Context) {
 func (h *Handler) GetSession(c *gin.Context) {
 	id := c.Param("id")
 	out, err := h.UC.GetSession(c, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *Handler) GetSessionResult(c *gin.Context) {
+	id := c.Param("id")
+	out, err := h.UC.GetSessionResult(c, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *Handler) ListMySessions(c *gin.Context) {
+	out, err := h.UC.ListMySessions(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
