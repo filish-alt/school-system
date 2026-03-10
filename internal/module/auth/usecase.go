@@ -22,6 +22,11 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
+type UpdatePasswordRequest struct {
+	OldPassword string `json:"old_password" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required"`
+}
+
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
 func NewAuthUsecase(repo *repository.UserRepository, ts security.TokenService) *Usecase {
@@ -64,4 +69,22 @@ func (a *Usecase) SeedSuperAdmin(ctx context.Context, username, password string)
 		RoleID:       &roleID,
 	}
 	return a.Users.Create(ctx, u)
+}
+
+func (a *Usecase) UpdatePassword(ctx context.Context, userID string, req UpdatePasswordRequest) error {
+	u, err := a.Users.GetByID(ctx, userID)
+	if err != nil || u == nil {
+		return errors.New("user not found")
+	}
+
+	if err := security.CheckPassword(u.PasswordHash, req.OldPassword); err != nil {
+		return errors.New("invalid old password")
+	}
+
+	h, err := security.HashPassword(req.NewPassword)
+	if err != nil {
+		return err
+	}
+
+	return a.Users.UpdatePassword(ctx, userID, h)
 }

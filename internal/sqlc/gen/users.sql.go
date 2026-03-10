@@ -38,6 +38,40 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
 	return err
 }
 
+const getUserByID = `-- name: GetUserByID :one
+SELECT u.id, u.tenant_id, u.username, u.password_hash, u.email, u.role_id, u.status, r.name AS role_name
+FROM users u
+LEFT JOIN roles r ON r.id = u.role_id
+WHERE u.id = ? LIMIT 1
+`
+
+type GetUserByIDRow struct {
+	ID           string         `json:"id"`
+	TenantID     sql.NullString `json:"tenant_id"`
+	Username     string         `json:"username"`
+	PasswordHash string         `json:"password_hash"`
+	Email        sql.NullString `json:"email"`
+	RoleID       sql.NullInt64  `json:"role_id"`
+	Status       sql.NullString `json:"status"`
+	RoleName     sql.NullString `json:"role_name"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByID, id)
+	var i GetUserByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.Email,
+		&i.RoleID,
+		&i.Status,
+		&i.RoleName,
+	)
+	return i, err
+}
+
 const getUserByUsername = `-- name: GetUserByUsername :one
 SELECT u.id, u.tenant_id, u.username, u.password_hash, u.email, u.role_id, u.status, r.name AS role_name
 FROM users u
@@ -70,4 +104,18 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (GetUs
 		&i.RoleName,
 	)
 	return i, err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE users SET password_hash = ? WHERE id = ?
+`
+
+type UpdateUserPasswordParams struct {
+	PasswordHash string `json:"password_hash"`
+	ID           string `json:"id"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.PasswordHash, arg.ID)
+	return err
 }

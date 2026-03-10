@@ -49,6 +49,38 @@ func (r *UserRepository) GetByUsername(ctx context.Context, username string) (*d
 	return &u, nil
 }
 
+func (r *UserRepository) GetByID(ctx context.Context, id string) (*domain.User, error) {
+	row, err := r.Queries.GetUserByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	var u domain.User
+	u.ID = row.ID
+	if row.TenantID.Valid {
+		u.TenantID = &row.TenantID.String
+	}
+	u.Username = row.Username
+	u.PasswordHash = row.PasswordHash
+	if row.Email.Valid {
+		u.Email = &row.Email.String
+	}
+	if row.RoleID.Valid {
+		v := int64(row.RoleID.Int64)
+		u.RoleID = &v
+	}
+	if row.Status.Valid {
+		u.Status = row.Status.String
+	}
+	if row.RoleName.Valid {
+		n := row.RoleName.String
+		u.RoleName = &n
+	}
+	return &u, nil
+}
+
 func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 	var tenant sql.NullString
 	if u.TenantID != nil {
@@ -70,5 +102,12 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 		Email:        email,
 		RoleID:       role,
 		Status:       sql.NullString{String: u.Status, Valid: true},
+	})
+}
+
+func (r *UserRepository) UpdatePassword(ctx context.Context, userID, hash string) error {
+	return r.Queries.UpdateUserPassword(ctx, queries.UpdateUserPasswordParams{
+		PasswordHash: hash,
+		ID:           userID,
 	})
 }

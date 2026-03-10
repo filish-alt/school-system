@@ -35,6 +35,7 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	// authenticated group (same prefix, adds auth)
 	authed := r.Group("/api/v1")
 	authed.Use(middleware.Auth(ts))
+	authed.PATCH("/auth/password", ah.UpdatePassword)
 
 	// super admin routes (must be authenticated)
 	sAdmin := authed.Group("/superadmin")
