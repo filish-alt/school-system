@@ -30,6 +30,8 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	// public group
 	v1 := r.Group("/api/v1")
 	v1.POST("/auth/login", ah.Login)
+	
+	sessH := hSession.NewHandler(sessionUC)
 	// authenticated group (same prefix, adds auth)
 	authed := r.Group("/api/v1")
 	authed.Use(middleware.Auth(ts))
@@ -76,6 +78,7 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	schoolGroup.POST("/assignments", sch.Assign)
 	schoolGroup.DELETE("/assignments", sch.Unassign)
 	schoolGroup.GET("/assignments", sch.ListAssignedTeachers)
+	schoolGroup.GET("/violations", sessH.ListAllViolations)
 	
 	// teacher routes
 	teacherGroup := authed.Group("/teacher")
@@ -109,13 +112,13 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	teacherGroup.DELETE("/exams/questions/:id", eh.RemoveQuestion)
 
 	// student routes
-	sessH := hSession.NewHandler(sessionUC)
 	studentGroup := authed.Group("/student")
 	studentGroup.Use(middleware.RequireRoles("student"))
 	{
 		studentGroup.GET("/exams", eh.ListStudentExams)
 		studentGroup.GET("/exams/:id", eh.GetStudentExam)
 		studentGroup.GET("/sessions", sessH.ListMySessions)
+		studentGroup.POST("/sessions/violations", sessH.ReportViolation)
 		studentGroup.POST("/sessions/start", sessH.StartSession)
 		studentGroup.POST("/sessions/answers", sessH.SaveAnswer)
 		studentGroup.POST("/sessions/submit", sessH.SubmitSession)
@@ -124,6 +127,7 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	}
 
 	authed.GET("/me", func(c *gin.Context) { c.JSON(200, gin.H{"time": time.Now().UTC()}) })
+
 	return r
 }
 

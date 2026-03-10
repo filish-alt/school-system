@@ -88,6 +88,7 @@ func Initiate() (*App, error) {
 	eqRepo := repository.NewExamQuestionRepository(sqlDB)
 	esRepo := repository.NewExamSessionRepository(sqlDB)
 	saRepo := repository.NewStudentAnswerRepository(sqlDB)
+	vRepo := repository.NewExamViolationRepository(sqlDB)
 
 	ts := security.TokenService{Secret: cfg.JWTSecret, TTL: time.Hour * 8}
 	authUC := auth.NewAuthUsecase(usersRepo, ts)
@@ -95,7 +96,7 @@ func Initiate() (*App, error) {
 	schoolUC := school.NewUsecase(sqlDB, depRepo, secRepo, subRepo, teaRepo, usersRepo)
 	teacherUC := teacher.NewUsecase(sqlDB, qbRepo, qqRepo, opRepo, teaRepo)
 	examUC := exam.NewUsecase(sqlDB, exRepo, eqRepo, teaRepo, stuRepo, opRepo)
-	sessionUC := exam_session.NewUsecase(sqlDB, esRepo, saRepo, stuRepo, exRepo, qqRepo, opRepo)
+	sessionUC := exam_session.NewUsecase(sqlDB, esRepo, saRepo, stuRepo, exRepo, qqRepo, opRepo, vRepo)
 
 	if err := authUC.SeedSuperAdmin(ctx, "superadmin", envDefault("SEED_SUPERADMIN_PASSWORD", "superadmin123")); err != nil {
 		return nil, err

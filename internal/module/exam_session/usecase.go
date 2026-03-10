@@ -20,19 +20,21 @@ type Usecase struct {
 	StudentRepo *repository.StudentRepository
 	ExamRepo    *repository.ExamRepository
 	QuestionRepo *repository.QuestionRepository
-	OptionRepo  *repository.OptionRepository
-	Queries     *q.Queries
+	OptionRepo   *repository.OptionRepository
+	ViolationRepo *repository.ExamViolationRepository
+	Queries      *q.Queries
 }
 
-func NewUsecase(db *sql.DB, sRepo *repository.ExamSessionRepository, aRepo *repository.StudentAnswerRepository, stuRepo *repository.StudentRepository, eRepo *repository.ExamRepository, qRepo *repository.QuestionRepository, oRepo *repository.OptionRepository) *Usecase {
+func NewUsecase(db *sql.DB, sRepo *repository.ExamSessionRepository, aRepo *repository.StudentAnswerRepository, stuRepo *repository.StudentRepository, eRepo *repository.ExamRepository, qRepo *repository.QuestionRepository, oRepo *repository.OptionRepository, vRepo *repository.ExamViolationRepository) *Usecase {
 	return &Usecase{
-		SessionRepo: sRepo,
-		AnswerRepo:  aRepo,
-		StudentRepo: stuRepo,
-		ExamRepo:    eRepo,
+		SessionRepo:  sRepo,
+		AnswerRepo:   aRepo,
+		StudentRepo:  stuRepo,
+		ExamRepo:     eRepo,
 		QuestionRepo: qRepo,
-		OptionRepo:  oRepo,
-		Queries:     q.New(db),
+		OptionRepo:   oRepo,
+		ViolationRepo: vRepo,
+		Queries:      q.New(db),
 	}
 }
 
@@ -268,6 +270,62 @@ func (u *Usecase) ListMySessions(ctx context.Context) ([]studentdto.SessionRespo
 			EndTime:    s.EndTime.Time,
 			Status:     s.Status.String,
 			TotalScore: s.TotalScore.Int64,
+		})
+	}
+	return res, nil
+}
+
+func (u *Usecase) ReportViolation(ctx context.Context, req studentdto.ReportViolationRequest) error {
+	studentID, err := u.studentInfo(ctx)
+	if err != nil {
+		return err
+	}
+
+	session, err := u.SessionRepo.Get(ctx, req.SessionID)
+	if err != nil {
+		return err
+	}
+
+	if session.StudentID.String != studentID {
+		return fmt.Errorf("unauthorized access to session")
+	}
+
+	return u.ViolationRepo.Create(ctx, q.CreateExamViolationParams{
+		ID:            uuid.New().String(),
+		SessionID:     sql.NullString{String: req.SessionID, Valid: true},
+		ViolationType: sql.NullString{String: req.ViolationType, Valid: true},
+		CreatedAt:     sql.NullTime{Time: time.Now().UTC(), Valid: true},
+	})
+}
+
+func (u *Usecase) ListAllViolations(ctx context.Context) ([]studentdto.ViolationResponse, error) {
+	c, ok := ctx.(*gin.Context)
+	if !ok {
+		return nil, fmt.Errorf("invalid context")
+	}
+	v, ok := c.Get("claims")
+	if !ok {
+		return nil, fmt.Errorf("claims missing")
+	}
+	claims := v.(*security.Claims)
+
+	violations, err := u.ViolationRepo.ListAll(ctx, toNullString(claims.TenantID))
+	if err != nil {
+		return nil, err
+	}
+
+	var res []studentdto.ViolationResponse
+	for _, v := range violations {
+		res = append(res, studentdto.ViolationResponse{
+			ID:            v.ID,
+			SessionID:     v.SessionID.String,
+			ViolationType: v.ViolationType.String,
+			CreatedAt:     v.CreatedAt.Time,
+			StudentID:     v.StudentID.String,
+			FirstName:     v.FirstName.String,
+			LastName:      v.LastName.String,
+			ExamID:        v.ExamID.String,
+			ExamTitle:     v.ExamTitle.String,
 		})
 	}
 	return res, nil

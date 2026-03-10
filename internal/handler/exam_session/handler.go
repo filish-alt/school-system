@@ -84,3 +84,25 @@ func (h *Handler) ListMySessions(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, out)
 }
+
+func (h *Handler) ReportViolation(c *gin.Context) {
+	var req studentdto.ReportViolationRequest
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if err := h.UC.ReportViolation(c, req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+func (h *Handler) ListAllViolations(c *gin.Context) {
+	out, err := h.UC.ListAllViolations(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
