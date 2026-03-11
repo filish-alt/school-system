@@ -111,6 +111,8 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	teacherGroup.POST("/exams/questions", eh.AddQuestions)
 	teacherGroup.POST("/exams/questions/random", eh.AddRandomQuestions)
 	teacherGroup.DELETE("/exams/questions/:id", eh.RemoveQuestion)
+	teacherGroup.GET("/exams/:id/marks", eh.GetExamMarks)
+	teacherGroup.GET("/exams/:id/marks/download", eh.DownloadExamMarks)
 
 	// student routes
 	studentGroup := authed.Group("/student")

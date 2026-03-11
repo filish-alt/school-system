@@ -155,3 +155,30 @@ func (h *Handler) RemoveQuestion(c *gin.Context) {
 	}
 	c.Status(http.StatusNoContent)
 }
+
+func (h *Handler) GetExamMarks(c *gin.Context) {
+	id := c.Param("id")
+	out, err := h.UC.GetExamMarks(c, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func (h *Handler) DownloadExamMarks(c *gin.Context) {
+	id := c.Param("id")
+	file, fileName, err := h.UC.DownloadExamMarks(c, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Header("Content-Disposition", "attachment; filename="+fileName)
+	
+	if err := file.Write(c.Writer); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to write excel file"})
+		return
+	}
+}

@@ -13,6 +13,7 @@ import (
 	"school-exam/internal/repository"
 	q "school-exam/internal/sqlc/gen"
 	"school-exam/internal/security"
+	"github.com/xuri/excelize/v2"
 )
 
 type Usecase struct {
@@ -375,4 +376,63 @@ func valueOrOldTime(t *time.Time, old time.Time) time.Time {
 		return *t
 	}
 	return old
+}
+func (u *Usecase) GetExamMarks(ctx context.Context, examID string) (examdto.ExamMarksResponse, error) {
+	exam, err := u.ExamRepo.Get(ctx, examID)
+	if err != nil {
+		return examdto.ExamMarksResponse{}, err
+	}
+
+	rows, err := u.ExamRepo.GetExamMarks(ctx, examID)
+	if err != nil {
+		return examdto.ExamMarksResponse{}, err
+	}
+
+	var marks []examdto.StudentMark
+	for _, r := range rows {
+		marks = append(marks, examdto.StudentMark{
+			StudentCode: valueOrEmpty(r.StudentCode),
+			FirstName:   valueOrEmpty(r.FirstName),
+			LastName:    valueOrEmpty(r.LastName),
+			SectionName: r.SectionName,
+			TotalScore:  r.TotalScore.Int64,
+		})
+	}
+
+	return examdto.ExamMarksResponse{
+		ExamTitle: valueOrEmpty(exam.Title),
+		Marks:     marks,
+	}, nil
+}
+
+func (u *Usecase) DownloadExamMarks(ctx context.Context, examID string) (*excelize.File, string, error) {
+	data, err := u.GetExamMarks(ctx, examID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	f := excelize.NewFile()
+	sheetName := "Marks"
+	index, _ := f.NewSheet(sheetName)
+	f.SetActiveSheet(index)
+	_ = f.DeleteSheet("Sheet1")
+
+	// Set header
+	headers := []string{"Student Code", "First Name", "Last Name", "Section", "Mark"}
+	for i, h := range headers {
+		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
+		_ = f.SetCellValue(sheetName, cell, h)
+	}
+
+	// Set data
+	for i, m := range data.Marks {
+		_ = f.SetCellValue(sheetName, fmt.Sprintf("A%d", i+2), m.StudentCode)
+		_ = f.SetCellValue(sheetName, fmt.Sprintf("B%d", i+2), m.FirstName)
+		_ = f.SetCellValue(sheetName, fmt.Sprintf("C%d", i+2), m.LastName)
+		_ = f.SetCellValue(sheetName, fmt.Sprintf("D%d", i+2), m.SectionName)
+		_ = f.SetCellValue(sheetName, fmt.Sprintf("E%d", i+2), m.TotalScore)
+	}
+
+	fileName := fmt.Sprintf("%s_marks.xlsx", data.ExamTitle)
+	return f, fileName, nil
 }

@@ -64,3 +64,7 @@ func (r *ExamRepository) UpdateTotalMarks(ctx context.Context, id string) error 
 func (r *ExamRepository) Delete(ctx context.Context, id string) error {
 	return r.Queries.DeleteExam(ctx, id)
 }
+
+func (r *ExamRepository) GetExamMarks(ctx context.Context, examID string) ([]q.GetExamMarksRow, error) {
+	return r.Queries.GetExamMarks(ctx, sql.NullString{String: examID, Valid: true})
+}
