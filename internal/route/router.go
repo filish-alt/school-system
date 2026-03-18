@@ -42,6 +42,7 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	sAdmin.Use(middleware.RequireRoles("super_admin"))
 
 	sh := hSuper.New(superUC)
+	sch := hSchool.New(schoolUC)
 	sAdmin.GET("/tenants", sh.ListTenants)
 	sAdmin.GET("/tenants/:id", sh.GetTenant)
 	sAdmin.POST("/tenants", sh.CreateTenant)
@@ -55,11 +56,12 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	sAdmin.PATCH("/students/:id", sh.UpdateStudent)
 	sAdmin.DELETE("/students/:id", sh.DeleteStudent)
 	sAdmin.POST("/students/import", sh.ImportStudents)
+	sAdmin.GET("/sections", sh.ListSections)
 
 	// school admin routes (must be authenticated)
 	schoolGroup := authed.Group("/school")
 	schoolGroup.Use(middleware.RequireRoles("school_admin"))
-	sch := hSchool.New(schoolUC)
+	//sch := hSchool.New(schoolUC)
 	schoolGroup.POST("/departments", sch.CreateDepartment)
 	schoolGroup.GET("/departments", sch.ListDepartments)
 	schoolGroup.PATCH("/departments", sch.UpdateDepartment)

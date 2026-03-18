@@ -6,12 +6,12 @@ import (
 )
 
 type CreateExamRequest struct {
-	Title           string    `json:"title" binding:"required"`
-	SubjectID       string    `json:"subject_id" binding:"required"`
-	SectionID       string    `json:"section_id" binding:"required"`
-	DurationMinutes int64     `json:"duration_minutes" binding:"required"`
-	StartTime       time.Time `json:"start_time" binding:"required"`
-	EndTime         time.Time `json:"end_time" binding:"required"`
+	Title           string     `json:"title" binding:"required"`
+	SubjectID       string     `json:"subject_id" binding:"required"`
+	SectionID       string     `json:"section_id" binding:"required"`
+	DurationMinutes int64      `json:"duration_minutes" binding:"required"`
+	StartTime       time.Time  `json:"start_time" binding:"required"`
+	EndTime         *time.Time `json:"end_time"`
 }
 
 type UpdateExamRequest struct {

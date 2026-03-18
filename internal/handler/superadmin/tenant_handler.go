@@ -177,6 +177,22 @@ func (h *Handler) ListStudents(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
+func (h *Handler) ListSections(c *gin.Context) {
+	tenantID := c.Query("tenant_id")
+	if strings.TrimSpace(tenantID) == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tenant_id required"})
+		return
+	}
+	var q sdto.ListQuery
+	_ = c.ShouldBindQuery(&q)
+	out, err := h.UC.ListSections(c, tenantID, q.Page, q.PageSize)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 func (h *Handler) DeleteStudent(c *gin.Context) {
 	id := c.Param("id")
 	if id == "" {

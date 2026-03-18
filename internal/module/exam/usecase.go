@@ -7,12 +7,13 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	examdto "school-exam/internal/dto/exam"
 	"school-exam/internal/repository"
-	q "school-exam/internal/sqlc/gen"
 	"school-exam/internal/security"
+	q "school-exam/internal/sqlc/gen"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/xuri/excelize/v2"
 )
 
@@ -67,6 +68,11 @@ func (u *Usecase) CreateExam(ctx context.Context, req examdto.CreateExamRequest)
 	}
 
 	id := uuid.New().String()
+	endTime := req.StartTime.Add(time.Duration(req.DurationMinutes) * time.Minute)
+	if req.EndTime != nil {
+		endTime = *req.EndTime
+	}
+
 	err = u.ExamRepo.Create(ctx, q.CreateExamParams{
 		ID:                 id,
 		TenantID:           sql.NullString{String: tenantID, Valid: tenantID != ""},
@@ -76,10 +82,10 @@ func (u *Usecase) CreateExam(ctx context.Context, req examdto.CreateExamRequest)
 		CreatedByTeacherID: sql.NullString{String: teacherID, Valid: true},
 		DurationMinutes:    req.DurationMinutes,
 		StartTime:          req.StartTime,
-		EndTime:            req.EndTime,
+		EndTime:            endTime,
 		Status:             sql.NullString{String: "draft", Valid: true},
 		TotalMarks:         sql.NullInt64{Int64: 0, Valid: true},
-		ShuffleOptions:    sql.NullInt64{Int64: 0, Valid: true},
+		ShuffleOptions:     sql.NullInt64{Int64: 0, Valid: true},
 	})
 	return id, err
 }
@@ -151,7 +157,7 @@ func (u *Usecase) getExamDetail(ctx context.Context, exam q.Exam, isTeacher bool
 	var questions []examdto.ExamQuestionDetail
 	for _, r := range rows {
 		options, _ := u.OptionRepo.ListByQuestion(ctx, valueOrEmpty(r.QuestionID), 100, 0)
-		
+
 		if !isTeacher {
 			for i := range options {
 				options[i].IsCorrect = sql.NullInt64{Int64: 0, Valid: false}
@@ -199,7 +205,7 @@ func (u *Usecase) ListStudentExams(ctx context.Context) ([]q.Exam, error) {
 		return nil, fmt.Errorf("claims missing")
 	}
 	claims := v.(*security.Claims)
-	
+
 	student, err := u.StudentRepo.GetByUserID(ctx, claims.UserID)
 	if err != nil {
 		return nil, err
@@ -218,14 +224,23 @@ func (u *Usecase) UpdateExam(ctx context.Context, req examdto.UpdateExamRequest)
 		return err
 	}
 
+	newDuration := valueOrOldInt(req.DurationMinutes, exam.DurationMinutes)
+	newStartTime := valueOrOldTime(req.StartTime, exam.StartTime)
+	newEndTime := valueOrOldTime(req.EndTime, exam.EndTime)
+
+	// If duration or start time changed, and end time was not explicitly provided, recalculate end time
+	if (req.DurationMinutes != nil || req.StartTime != nil) && req.EndTime == nil {
+		newEndTime = newStartTime.Add(time.Duration(newDuration) * time.Minute)
+	}
+
 	params := q.UpdateExamParams{
 		ID:              req.ID,
 		Title:           toNullString(req.Title, exam.Title),
 		SubjectID:       valueOrOldString(req.SubjectID, exam.SubjectID),
 		SectionID:       valueOrOldString(req.SectionID, exam.SectionID),
-		DurationMinutes: valueOrOldInt(req.DurationMinutes, exam.DurationMinutes),
-		StartTime:       valueOrOldTime(req.StartTime, exam.StartTime),
-		EndTime:         valueOrOldTime(req.EndTime, exam.EndTime),
+		DurationMinutes: newDuration,
+		StartTime:       newStartTime,
+		EndTime:         newEndTime,
 		ShuffleOptions:  toNullBoolInt(req.ShuffleOptions, exam.ShuffleOptions),
 	}
 
@@ -260,10 +275,10 @@ func (u *Usecase) AddQuestions(ctx context.Context, req examdto.AddQuestionsRequ
 			return err
 		}
 	}
-	
+
 	if req.ShuffleOptions {
 		_ = u.Queries.UpdateExam(ctx, q.UpdateExamParams{
-			ID: req.ExamID,
+			ID:             req.ExamID,
 			ShuffleOptions: sql.NullInt64{Int64: 1, Valid: true},
 		})
 	}
@@ -292,11 +307,11 @@ func (u *Usecase) AddRandomQuestions(ctx context.Context, req examdto.AddRandomQ
 
 	if req.ShuffleOptions {
 		_ = u.Queries.UpdateExam(ctx, q.UpdateExamParams{
-			ID: req.ExamID,
+			ID:             req.ExamID,
 			ShuffleOptions: sql.NullInt64{Int64: 1, Valid: true},
 		})
 	}
-	
+
 	return u.ExamRepo.UpdateTotalMarks(ctx, req.ExamID)
 }
 

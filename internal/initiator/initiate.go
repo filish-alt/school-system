@@ -92,7 +92,7 @@ func Initiate() (*App, error) {
 
 	ts := security.TokenService{Secret: cfg.JWTSecret, TTL: time.Hour * 8}
 	authUC := auth.NewAuthUsecase(usersRepo, ts)
-	superUC := superadmin.NewUsecase(tenRepo, usersRepo, stuRepo)
+	superUC := superadmin.NewUsecase(tenRepo, usersRepo, stuRepo, secRepo)
 	schoolUC := school.NewUsecase(sqlDB, depRepo, secRepo, subRepo, teaRepo, usersRepo)
 	teacherUC := teacher.NewUsecase(sqlDB, qbRepo, qqRepo, opRepo, teaRepo)
 	examUC := exam.NewUsecase(sqlDB, exRepo, eqRepo, teaRepo, stuRepo, opRepo)

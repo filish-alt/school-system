@@ -70,6 +70,14 @@ func (u *Usecase) StartSession(ctx context.Context, req studentdto.StartSessionR
 		return "", fmt.Errorf("exam is not published")
 	}
 
+	now := time.Now().UTC()
+	if now.Before(exam.StartTime) {
+		return "", fmt.Errorf("exam has not started yet")
+	}
+	if now.After(exam.EndTime) {
+		return "", fmt.Errorf("exam has already ended")
+	}
+
 	// Check for existing active session
 	active, err := u.SessionRepo.GetActive(ctx, studentID, req.ExamID)
 	if err == nil {
@@ -77,7 +85,7 @@ func (u *Usecase) StartSession(ctx context.Context, req studentdto.StartSessionR
 	}
 
 	id := uuid.New().String()
-	now := time.Now().UTC()
+	//now := time.Now().UTC()
 	duration := time.Duration(exam.DurationMinutes) * time.Minute
 	endTime := now.Add(duration)
 

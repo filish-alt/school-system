@@ -23,11 +23,12 @@ type Usecase struct {
 	Tenants  *repository.TenantRepository
 	Users    *repository.UserRepository
 	Students *repository.StudentRepository
+	Sections *repository.SectionRepository
 	Queries  *q.Queries
 }
 
-func NewUsecase(t *repository.TenantRepository, u *repository.UserRepository, s *repository.StudentRepository) *Usecase {
-	return &Usecase{Tenants: t, Users: u, Students: s, Queries: q.New(t.DB)}
+func NewUsecase(t *repository.TenantRepository, u *repository.UserRepository, s *repository.StudentRepository, sec *repository.SectionRepository) *Usecase {
+	return &Usecase{Tenants: t, Users: u, Students: s, Sections: sec, Queries: q.New(t.DB)}
 }
 
 func (u *Usecase) CreateTenant(ctx context.Context, req sdto.CreateTenantRequest) (*sdto.CreateTenantResponse, error) {
@@ -94,6 +95,11 @@ func (u *Usecase) ListTenants(ctx context.Context, status *string, page, pageSiz
 		return u.Tenants.ListByStatus(ctx, *status, limit, offset)
 	}
 	return u.Tenants.List(ctx, limit, offset)
+}
+
+func (u *Usecase) ListSections(ctx context.Context, tenantID string, page, pageSize int64) ([]q.Section, error) {
+	limit, offset := normalizePagination(page, pageSize)
+	return u.Sections.ListByTenant(ctx, tenantID, limit, offset)
 }
 
 func (u *Usecase) DeleteTenant(ctx context.Context, id string) error {
