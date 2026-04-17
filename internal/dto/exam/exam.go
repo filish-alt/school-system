@@ -37,7 +37,7 @@ type AddQuestionsRequest struct {
 
 type ExamQuestionInput struct {
 	QuestionID string `json:"question_id" binding:"required"`
-	Marks      int64  `json:"marks" binding:"required"`
+	Marks      *int64 `json:"marks"`
 	OrderIndex int64  `json:"order_index"`
 }
 
@@ -45,7 +45,7 @@ type AddRandomQuestionsRequest struct {
 	ExamID         string `json:"exam_id" binding:"required"`
 	QuestionBankID string `json:"question_bank_id" binding:"required"`
 	Count          int64  `json:"count" binding:"required"`
-	Marks          int64  `json:"marks" binding:"required"`
+	Marks          *int64 `json:"marks"`
 	ShuffleOptions bool   `json:"shuffle_options"`
 }
 

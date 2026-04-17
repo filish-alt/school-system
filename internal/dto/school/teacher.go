@@ -3,6 +3,7 @@ package schooldto
 type CreateTeacherRequest struct {
 	FirstName    string  `json:"first_name" binding:"required"`
 	LastName     string  `json:"last_name" binding:"required"`
+	TeacherCode  string  `json:"teacher_code" binding:"required"`
 	DepartmentID *string `json:"department_id"`
 	Email        *string `json:"email"`
 }
@@ -17,6 +18,7 @@ type UpdateTeacherRequest struct {
 	ID           string  `json:"id" binding:"required"`
 	FirstName    *string `json:"first_name"`
 	LastName     *string `json:"last_name"`
+	TeacherCode  *string `json:"teacher_code"`
 	DepartmentID *string `json:"department_id"`
 }
 

@@ -18,4 +18,7 @@ FROM student_answers WHERE session_id = ?;
 SELECT id FROM question_options WHERE question_id = ? AND is_correct = 1 LIMIT 1;
 
 -- name: GetExamQuestionMarks :one
-SELECT marks FROM exam_questions WHERE exam_id = ? AND question_id = ? LIMIT 1;
+SELECT COALESCE(NULLIF(eq.marks, 0), q.marks) as marks
+FROM exam_questions eq
+JOIN questions q ON q.id = eq.question_id
+WHERE eq.exam_id = ? AND eq.question_id = ? LIMIT 1;

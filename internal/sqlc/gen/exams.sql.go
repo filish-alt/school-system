@@ -264,7 +264,12 @@ func (q *Queries) UpdateExamStatus(ctx context.Context, arg UpdateExamStatusPara
 }
 
 const updateExamTotalMarks = `-- name: UpdateExamTotalMarks :exec
-UPDATE exams SET total_marks = (SELECT COALESCE(SUM(marks), 0) FROM exam_questions WHERE exam_questions.exam_id = ?) WHERE exams.id = ?
+UPDATE exams SET total_marks = (
+    SELECT COALESCE(SUM(COALESCE(NULLIF(eq.marks, 0), q.marks)), 0) 
+    FROM exam_questions eq
+    JOIN questions q ON q.id = eq.question_id
+    WHERE eq.exam_id = ?
+) WHERE exams.id = ?
 `
 
 type UpdateExamTotalMarksParams struct {

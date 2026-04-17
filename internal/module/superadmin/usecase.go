@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/csv"
 	"encoding/hex"
-	"fmt"
 	"io"
 	"strings"
 
@@ -37,19 +36,7 @@ func (u *Usecase) CreateTenant(ctx context.Context, req sdto.CreateTenantRequest
 		return nil, err
 	}
 	// create a school_admin for this tenant
-	// username: 'admin' + 4 hex
-	base := "admin"
-	username := fmt.Sprintf("%s%s", base, randHex(4))
-	for {
-		exists, err := u.Users.GetByUsername(ctx, username)
-		if err != nil {
-			return nil, err
-		}
-		if exists == nil {
-			break
-		}
-		username = fmt.Sprintf("%s%s", base, randHex(4))
-	}
+	username := req.AdminUsername
 	password := randHex(6)
 	hash, err := security.HashPassword(password)
 	if err != nil {
@@ -116,19 +103,7 @@ func (u *Usecase) UpdateStudent(ctx context.Context, req sdto.UpdateStudentReque
 }
 
 func (u *Usecase) CreateStudent(ctx context.Context, req sdto.CreateStudentRequest) (*sdto.CreateStudentResponse, error) {
-	base := strings.ToLower(string([]rune(req.FirstName)[0]) + req.LastName)
-	suffix := randHex(4)
-	username := fmt.Sprintf("%s%s", base, suffix)
-	for {
-		exists, err := u.Users.GetByUsername(ctx, username)
-		if err != nil {
-			return nil, err
-		}
-		if exists == nil {
-			break
-		}
-		username = fmt.Sprintf("%s%s", base, randHex(4))
-	}
+	username := req.StudentCode
 	password := randHex(6)
 	hash, err := security.HashPassword(password)
 	if err != nil {

@@ -264,11 +264,22 @@ func (u *Usecase) DeleteExam(ctx context.Context, id string) error {
 
 func (u *Usecase) AddQuestions(ctx context.Context, req examdto.AddQuestionsRequest) error {
 	for _, qi := range req.Questions {
+		marks := int64(0)
+		if qi.Marks != nil {
+			marks = *qi.Marks
+		} else {
+			// Fallback to bank marks
+			qs, err := u.Queries.GetQuestion(ctx, qi.QuestionID)
+			if err == nil {
+				marks = qs.Marks.Int64
+			}
+		}
+
 		err := u.EQRepo.Add(ctx, q.AddExamQuestionParams{
 			ID:         uuid.New().String(),
 			ExamID:     sql.NullString{String: req.ExamID, Valid: true},
 			QuestionID: sql.NullString{String: qi.QuestionID, Valid: true},
-			Marks:      sql.NullInt64{Int64: qi.Marks, Valid: true},
+			Marks:      sql.NullInt64{Int64: marks, Valid: true},
 			OrderIndex: sql.NullInt64{Int64: qi.OrderIndex, Valid: true},
 		})
 		if err != nil {
@@ -293,11 +304,19 @@ func (u *Usecase) AddRandomQuestions(ctx context.Context, req examdto.AddRandomQ
 	}
 
 	for i, qs := range questions {
+		marks := int64(0)
+		if req.Marks != nil {
+			marks = *req.Marks
+		} else {
+			// Fallback to bank marks (which we already have in qs)
+			marks = qs.Marks.Int64
+		}
+
 		err := u.EQRepo.Add(ctx, q.AddExamQuestionParams{
 			ID:         uuid.New().String(),
 			ExamID:     sql.NullString{String: req.ExamID, Valid: true},
 			QuestionID: sql.NullString{String: qs.ID, Valid: true},
-			Marks:      sql.NullInt64{Int64: req.Marks, Valid: true},
+			Marks:      sql.NullInt64{Int64: marks, Valid: true},
 			OrderIndex: sql.NullInt64{Int64: int64(i + 1), Valid: true},
 		})
 		if err != nil {

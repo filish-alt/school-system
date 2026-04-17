@@ -22,7 +22,10 @@ func (q *Queries) GetCorrectOptionForQuestion(ctx context.Context, questionID sq
 }
 
 const getExamQuestionMarks = `-- name: GetExamQuestionMarks :one
-SELECT marks FROM exam_questions WHERE exam_id = ? AND question_id = ? LIMIT 1
+SELECT COALESCE(NULLIF(eq.marks, 0), q.marks) as marks
+FROM exam_questions eq
+JOIN questions q ON q.id = eq.question_id
+WHERE eq.exam_id = ? AND eq.question_id = ? LIMIT 1
 `
 
 type GetExamQuestionMarksParams struct {

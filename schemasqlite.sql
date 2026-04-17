@@ -72,6 +72,7 @@ CREATE TABLE students (
 CREATE TABLE teachers (
     id TEXT PRIMARY KEY,
     tenant_id TEXT,
+    teacher_code TEXT UNIQUE,
     first_name TEXT,
     last_name TEXT,
     department_id TEXT,

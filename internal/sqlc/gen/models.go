@@ -144,6 +144,7 @@ type Subject struct {
 type Teacher struct {
 	ID           string         `json:"id"`
 	TenantID     sql.NullString `json:"tenant_id"`
+	TeacherCode  sql.NullString `json:"teacher_code"`
 	FirstName    sql.NullString `json:"first_name"`
 	LastName     sql.NullString `json:"last_name"`
 	DepartmentID sql.NullString `json:"department_id"`

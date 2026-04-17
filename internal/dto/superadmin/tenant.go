@@ -1,9 +1,10 @@
 package superadmindto
 
 type CreateTenantRequest struct {
-	Name    string  `json:"name" binding:"required"`
-	Address *string `json:"address"`
-	Phone   *string `json:"phone"`
+	Name          string  `json:"name" binding:"required"`
+	Address       *string `json:"address"`
+	Phone         *string `json:"phone"`
+	AdminUsername string  `json:"admin_username" binding:"required"`
 }
 
 type CreateTenantResponse struct {

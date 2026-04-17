@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"school-exam/internal/domain"
 	schooldto "school-exam/internal/dto/school"
@@ -213,18 +212,7 @@ func (u *Usecase) CreateTeacher(ctx context.Context, req schooldto.CreateTeacher
 	if err != nil {
 		return nil, err
 	}
-	base := strings.ToLower(string([]rune(req.FirstName)[0]) + req.LastName)
-	username := fmt.Sprintf("%s%s", base, randHex(4))
-	for {
-		exists, err := u.Users.GetByUsername(ctx, username)
-		if err != nil {
-			return nil, err
-		}
-		if exists == nil {
-			break
-		}
-		username = fmt.Sprintf("%s%s", base, randHex(4))
-	}
+	username := req.TeacherCode
 	password := randHex(6)
 	hash, err := security.HashPassword(password)
 	if err != nil {
@@ -255,6 +243,7 @@ func (u *Usecase) CreateTeacher(ctx context.Context, req schooldto.CreateTeacher
 	if err := u.Teachers.Create(ctx, q.CreateTeacherParams{
 		ID:           tID,
 		TenantID:     sql.NullString{String: tid, Valid: true},
+		TeacherCode:  sql.NullString{String: req.TeacherCode, Valid: true},
 		FirstName:    sql.NullString{String: req.FirstName, Valid: true},
 		LastName:     sql.NullString{String: req.LastName, Valid: true},
 		DepartmentID: dep,
@@ -279,11 +268,22 @@ func (u *Usecase) ListTeachers(ctx context.Context, page, pageSize int64) ([]q.T
 }
 
 func (u *Usecase) UpdateTeacher(ctx context.Context, req schooldto.UpdateTeacherRequest) error {
+	cur, err := u.Teachers.GetByID(ctx, req.ID)
+	if err != nil {
+		return err
+	}
+
+	code := cur.TeacherCode
+	if req.TeacherCode != nil {
+		code = sql.NullString{String: *req.TeacherCode, Valid: true}
+	}
+
 	return u.Teachers.Update(ctx, q.UpdateTeacherParams{
 		ID:           req.ID,
 		FirstName:    toNull(req.FirstName),
 		LastName:     toNull(req.LastName),
 		DepartmentID: toNull(req.DepartmentID),
+		TeacherCode:  code,
 	})
 }
 

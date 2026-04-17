@@ -11,12 +11,13 @@ import (
 )
 
 const createTeacher = `-- name: CreateTeacher :exec
-INSERT INTO teachers (id, tenant_id, first_name, last_name, department_id, user_id) VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO teachers (id, tenant_id, teacher_code, first_name, last_name, department_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateTeacherParams struct {
 	ID           string         `json:"id"`
 	TenantID     sql.NullString `json:"tenant_id"`
+	TeacherCode  sql.NullString `json:"teacher_code"`
 	FirstName    sql.NullString `json:"first_name"`
 	LastName     sql.NullString `json:"last_name"`
 	DepartmentID sql.NullString `json:"department_id"`
@@ -27,6 +28,7 @@ func (q *Queries) CreateTeacher(ctx context.Context, arg CreateTeacherParams) er
 	_, err := q.db.ExecContext(ctx, createTeacher,
 		arg.ID,
 		arg.TenantID,
+		arg.TeacherCode,
 		arg.FirstName,
 		arg.LastName,
 		arg.DepartmentID,
@@ -45,7 +47,7 @@ func (q *Queries) DeleteTeacher(ctx context.Context, id string) error {
 }
 
 const getTeacherByID = `-- name: GetTeacherByID :one
-SELECT id, tenant_id, first_name, last_name, department_id, user_id FROM teachers WHERE id = ? LIMIT 1
+SELECT id, tenant_id, teacher_code, first_name, last_name, department_id, user_id FROM teachers WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetTeacherByID(ctx context.Context, id string) (Teacher, error) {
@@ -54,6 +56,7 @@ func (q *Queries) GetTeacherByID(ctx context.Context, id string) (Teacher, error
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
+		&i.TeacherCode,
 		&i.FirstName,
 		&i.LastName,
 		&i.DepartmentID,
@@ -63,7 +66,7 @@ func (q *Queries) GetTeacherByID(ctx context.Context, id string) (Teacher, error
 }
 
 const getTeacherByUserID = `-- name: GetTeacherByUserID :one
-SELECT id, tenant_id, first_name, last_name, department_id, user_id FROM teachers WHERE user_id = ? LIMIT 1
+SELECT id, tenant_id, teacher_code, first_name, last_name, department_id, user_id FROM teachers WHERE user_id = ? LIMIT 1
 `
 
 func (q *Queries) GetTeacherByUserID(ctx context.Context, userID sql.NullString) (Teacher, error) {
@@ -72,6 +75,7 @@ func (q *Queries) GetTeacherByUserID(ctx context.Context, userID sql.NullString)
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
+		&i.TeacherCode,
 		&i.FirstName,
 		&i.LastName,
 		&i.DepartmentID,
@@ -81,7 +85,7 @@ func (q *Queries) GetTeacherByUserID(ctx context.Context, userID sql.NullString)
 }
 
 const listTeachersByTenant = `-- name: ListTeachersByTenant :many
-SELECT id, tenant_id, first_name, last_name, department_id, user_id FROM teachers WHERE tenant_id = ? ORDER BY last_name, first_name LIMIT ? OFFSET ?
+SELECT id, tenant_id, teacher_code, first_name, last_name, department_id, user_id FROM teachers WHERE tenant_id = ? ORDER BY last_name, first_name LIMIT ? OFFSET ?
 `
 
 type ListTeachersByTenantParams struct {
@@ -102,6 +106,7 @@ func (q *Queries) ListTeachersByTenant(ctx context.Context, arg ListTeachersByTe
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
+			&i.TeacherCode,
 			&i.FirstName,
 			&i.LastName,
 			&i.DepartmentID,
@@ -121,13 +126,14 @@ func (q *Queries) ListTeachersByTenant(ctx context.Context, arg ListTeachersByTe
 }
 
 const updateTeacher = `-- name: UpdateTeacher :exec
-UPDATE teachers SET first_name = ?, last_name = ?, department_id = ? WHERE id = ?
+UPDATE teachers SET first_name = ?, last_name = ?, department_id = ?, teacher_code = ? WHERE id = ?
 `
 
 type UpdateTeacherParams struct {
 	FirstName    sql.NullString `json:"first_name"`
 	LastName     sql.NullString `json:"last_name"`
 	DepartmentID sql.NullString `json:"department_id"`
+	TeacherCode  sql.NullString `json:"teacher_code"`
 	ID           string         `json:"id"`
 }
 
@@ -136,6 +142,7 @@ func (q *Queries) UpdateTeacher(ctx context.Context, arg UpdateTeacherParams) er
 		arg.FirstName,
 		arg.LastName,
 		arg.DepartmentID,
+		arg.TeacherCode,
 		arg.ID,
 	)
 	return err
