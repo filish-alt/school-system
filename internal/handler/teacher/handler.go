@@ -2,9 +2,13 @@ package teacher
 
 import (
 	"encoding/csv"
+	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	teacherdto "school-exam/internal/dto/teacher"
 	"school-exam/internal/module/teacher"
 )
@@ -209,4 +213,35 @@ func (h *Handler) ImportQuestions(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "questions imported successfully"})
+}
+
+func (h *Handler) UploadImage(c *gin.Context) {
+	file, err := c.FormFile("image")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "image required"})
+		return
+	}
+
+	// Create uploads directory if it doesn't exist
+	if _, err := os.Stat("uploads"); os.IsNotExist(err) {
+		err = os.Mkdir("uploads", 0755)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create upload directory"})
+			return
+		}
+	}
+
+	// Generate unique filename
+	ext := filepath.Ext(file.Filename)
+	filename := uuid.New().String() + ext
+	savePath := filepath.Join("uploads", filename)
+
+	if err := c.SaveUploadedFile(file, savePath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save file"})
+		return
+	}
+
+	// Return the relative URL
+	url := fmt.Sprintf("/uploads/%s", filename)
+	c.JSON(http.StatusOK, gin.H{"url": url})
 }

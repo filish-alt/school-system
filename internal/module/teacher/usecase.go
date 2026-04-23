@@ -82,6 +82,7 @@ func (u *Usecase) CreateQuestion(ctx context.Context, req teacherdto.CreateQuest
 		QuestionBankID: sql.NullString{String: req.QuestionBankID, Valid: true},
 		Type:           sql.NullString{String: req.Type, Valid: true},
 		QuestionText:   sql.NullString{String: req.QuestionText, Valid: true},
+		ImageURL:       toNullStringSimple(req.ImageURL),
 		Marks:          toNullInt64Simple(req.Marks),
 		DifficultyLevel: toNullStringSimple(req.Difficulty),
 	})
@@ -101,6 +102,7 @@ func (u *Usecase) UpdateQuestion(ctx context.Context, req teacherdto.UpdateQuest
 		ID:             req.ID,
 		Type:           toNullString(req.Type, existing.Type),
 		QuestionText:   toNullString(req.QuestionText, existing.QuestionText),
+		ImageURL:       toNullString(req.ImageURL, existing.ImageURL),
 		Marks:          toNullInt64(req.Marks, existing.Marks),
 		DifficultyLevel: toNullStringWithDefault(req.Difficulty, existing.DifficultyLevel),
 	})

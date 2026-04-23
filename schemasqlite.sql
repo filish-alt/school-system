@@ -117,6 +117,7 @@ CREATE TABLE questions (
     question_bank_id TEXT,
     type TEXT CHECK (type IN ('mcq','true_false','short','essay')),
     question_text TEXT,
+    image_url TEXT,
     marks INTEGER,
     difficulty_level TEXT,
     FOREIGN KEY (question_bank_id) REFERENCES question_banks(id)

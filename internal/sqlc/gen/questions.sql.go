@@ -11,7 +11,7 @@ import (
 )
 
 const createQuestion = `-- name: CreateQuestion :exec
-INSERT INTO questions (id, question_bank_id, type, question_text, marks, difficulty_level) VALUES (?, ?, ?, ?, ?, ?)
+INSERT INTO questions (id, question_bank_id, type, question_text, image_url, marks, difficulty_level) VALUES (?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateQuestionParams struct {
@@ -19,6 +19,7 @@ type CreateQuestionParams struct {
 	QuestionBankID  sql.NullString `json:"question_bank_id"`
 	Type            sql.NullString `json:"type"`
 	QuestionText    sql.NullString `json:"question_text"`
+	ImageURL        sql.NullString `json:"image_url"`
 	Marks           sql.NullInt64  `json:"marks"`
 	DifficultyLevel sql.NullString `json:"difficulty_level"`
 }
@@ -29,6 +30,7 @@ func (q *Queries) CreateQuestion(ctx context.Context, arg CreateQuestionParams) 
 		arg.QuestionBankID,
 		arg.Type,
 		arg.QuestionText,
+		arg.ImageURL,
 		arg.Marks,
 		arg.DifficultyLevel,
 	)
@@ -45,7 +47,7 @@ func (q *Queries) DeleteQuestion(ctx context.Context, id string) error {
 }
 
 const getQuestion = `-- name: GetQuestion :one
-SELECT id, question_bank_id, type, question_text, marks, difficulty_level FROM questions WHERE id = ? LIMIT 1
+SELECT id, question_bank_id, type, question_text, image_url, marks, difficulty_level FROM questions WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetQuestion(ctx context.Context, id string) (Question, error) {
@@ -56,6 +58,7 @@ func (q *Queries) GetQuestion(ctx context.Context, id string) (Question, error) 
 		&i.QuestionBankID,
 		&i.Type,
 		&i.QuestionText,
+		&i.ImageURL,
 		&i.Marks,
 		&i.DifficultyLevel,
 	)
@@ -63,7 +66,7 @@ func (q *Queries) GetQuestion(ctx context.Context, id string) (Question, error) 
 }
 
 const listQuestionsByBank = `-- name: ListQuestionsByBank :many
-SELECT id, question_bank_id, type, question_text, marks, difficulty_level FROM questions WHERE question_bank_id = ? LIMIT ? OFFSET ?
+SELECT id, question_bank_id, type, question_text, image_url, marks, difficulty_level FROM questions WHERE question_bank_id = ? LIMIT ? OFFSET ?
 `
 
 type ListQuestionsByBankParams struct {
@@ -86,6 +89,7 @@ func (q *Queries) ListQuestionsByBank(ctx context.Context, arg ListQuestionsByBa
 			&i.QuestionBankID,
 			&i.Type,
 			&i.QuestionText,
+			&i.ImageURL,
 			&i.Marks,
 			&i.DifficultyLevel,
 		); err != nil {
@@ -103,12 +107,13 @@ func (q *Queries) ListQuestionsByBank(ctx context.Context, arg ListQuestionsByBa
 }
 
 const updateQuestion = `-- name: UpdateQuestion :exec
-UPDATE questions SET type = ?, question_text = ?, marks = ?, difficulty_level = ? WHERE id = ?
+UPDATE questions SET type = ?, question_text = ?, image_url = ?, marks = ?, difficulty_level = ? WHERE id = ?
 `
 
 type UpdateQuestionParams struct {
 	Type            sql.NullString `json:"type"`
 	QuestionText    sql.NullString `json:"question_text"`
+	ImageURL        sql.NullString `json:"image_url"`
 	Marks           sql.NullInt64  `json:"marks"`
 	DifficultyLevel sql.NullString `json:"difficulty_level"`
 	ID              string         `json:"id"`
@@ -118,6 +123,7 @@ func (q *Queries) UpdateQuestion(ctx context.Context, arg UpdateQuestionParams) 
 	_, err := q.db.ExecContext(ctx, updateQuestion,
 		arg.Type,
 		arg.QuestionText,
+		arg.ImageURL,
 		arg.Marks,
 		arg.DifficultyLevel,
 		arg.ID,

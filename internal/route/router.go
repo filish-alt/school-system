@@ -26,6 +26,7 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	r.Use(CORSMiddleware())
 	
 	r.GET("/health", func(c *gin.Context) { c.JSON(200, gin.H{"status": "ok"}) })
+	r.Static("/uploads", "./uploads")
 	ah := hAuth.New(authUC)
 	// public group
 	v1 := r.Group("/api/v1")
@@ -89,6 +90,7 @@ func SetupRouter(authUC *auth.Usecase, superUC *superadmin.Usecase, schoolUC *sc
 	th := hTeacher.New(teacherUC)
 	teacherGroup.POST("/question-banks", th.CreateQuestionBank)
 	teacherGroup.GET("/question-banks", th.ListQuestionBanks)
+	teacherGroup.POST("/upload", th.UploadImage)
 	teacherGroup.POST("/questions", th.CreateQuestion)
 	teacherGroup.GET("/questions", th.ListQuestions)
 	teacherGroup.POST("/questions/import", th.ImportQuestions)

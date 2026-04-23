@@ -70,6 +70,7 @@ type Question struct {
 	QuestionBankID  sql.NullString `json:"question_bank_id"`
 	Type            sql.NullString `json:"type"`
 	QuestionText    sql.NullString `json:"question_text"`
+	ImageURL        sql.NullString `json:"image_url"`
 	Marks           sql.NullInt64  `json:"marks"`
 	DifficultyLevel sql.NullString `json:"difficulty_level"`
 }

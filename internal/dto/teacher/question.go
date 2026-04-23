@@ -4,6 +4,7 @@ type CreateQuestionRequest struct {
 	QuestionBankID string  `json:"question_bank_id" binding:"required"`
 	Type           string  `json:"type" binding:"required"`
 	QuestionText   string  `json:"question_text" binding:"required"`
+	ImageURL       *string `json:"image_url"`
 	Marks          *int64  `json:"marks"`
 	Difficulty     *string `json:"difficulty_level"`
 }
@@ -12,6 +13,7 @@ type UpdateQuestionRequest struct {
 	ID             string  `json:"id" binding:"required"`
 	Type           *string `json:"type"`
 	QuestionText   *string `json:"question_text"`
+	ImageURL       *string `json:"image_url"`
 	Marks          *int64  `json:"marks"`
 	Difficulty     *string `json:"difficulty_level"`
 }
