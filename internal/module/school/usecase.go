@@ -17,6 +17,7 @@ import (
 )
 
 type Usecase struct {
+	DB          *sql.DB
 	Departments *repository.DepartmentRepository
 	Sections    *repository.SectionRepository
 	Subjects    *repository.SubjectRepository
@@ -27,6 +28,7 @@ type Usecase struct {
 
 func NewUsecase(db *sql.DB, deps *repository.DepartmentRepository, secs *repository.SectionRepository, subs *repository.SubjectRepository, teachers *repository.TeacherRepository, users *repository.UserRepository) *Usecase {
 	return &Usecase{
+		DB:          db,
 		Departments: deps,
 		Sections:    secs,
 		Subjects:    subs,
@@ -37,16 +39,36 @@ func NewUsecase(db *sql.DB, deps *repository.DepartmentRepository, secs *reposit
 }
 
 func (u *Usecase) tenantFromContext(ctx context.Context) (string, error) {
-	c := ctx.(*gin.Context)
-	v, ok := c.Get("claims")
-	if !ok {
-		return "", fmt.Errorf("claims missing")
+	c, ok := ctx.(*gin.Context)
+	if ok {
+		v, claimsOk := c.Get("claims")
+		if claimsOk {
+			claims := v.(*security.Claims)
+			if claims.TenantID != nil && *claims.TenantID != "" {
+				return *claims.TenantID, nil
+			}
+		}
+		if tid := c.Query("tenant_id"); tid != "" {
+			return tid, nil
+		}
+		if tid := c.GetHeader("X-Tenant-ID"); tid != "" {
+			return tid, nil
+		}
 	}
-	claims := v.(*security.Claims)
-	if claims.TenantID == nil || *claims.TenantID == "" {
-		return "", fmt.Errorf("tenant missing")
+
+	// Fallback to first active tenant for super admin operations
+	if u.DB != nil {
+		var firstID string
+		err := u.DB.QueryRowContext(ctx, "SELECT id FROM tenants WHERE status = 'active' LIMIT 1").Scan(&firstID)
+		if err != nil || firstID == "" {
+			_ = u.DB.QueryRowContext(ctx, "SELECT id FROM tenants LIMIT 1").Scan(&firstID)
+		}
+		if firstID != "" {
+			return firstID, nil
+		}
 	}
-	return *claims.TenantID, nil
+
+	return "", fmt.Errorf("tenant missing")
 }
 
 // Departments
@@ -218,9 +240,29 @@ func (u *Usecase) CreateTeacher(ctx context.Context, req schooldto.CreateTeacher
 	if err != nil {
 		return nil, err
 	}
-	roleRow, err := u.Queries.GetRoleByName(ctx, "teacher")
+
+	roleToAssign := "teacher"
+	if req.RoleName != nil && *req.RoleName != "" {
+		validRoles := map[string]bool{
+			"teacher":         true,
+			"department_head": true,
+			"vice_director":   true,
+			"school_director": true,
+		}
+		if validRoles[*req.RoleName] {
+			roleToAssign = *req.RoleName
+		}
+	}
+
+	roleRow, err := u.Queries.GetRoleByName(ctx, roleToAssign)
 	if err != nil {
-		return nil, err
+		if u.DB != nil {
+			_, _ = u.DB.ExecContext(ctx, "INSERT OR IGNORE INTO roles (name) VALUES (?)", roleToAssign)
+			roleRow, err = u.Queries.GetRoleByName(ctx, roleToAssign)
+		}
+		if err != nil {
+			return nil, fmt.Errorf("role %s not found: %w", roleToAssign, err)
+		}
 	}
 	roleID := roleRow.ID
 	userID := uuid.New().String()
@@ -255,16 +297,17 @@ func (u *Usecase) CreateTeacher(ctx context.Context, req schooldto.CreateTeacher
 		TeacherID: tID,
 		Username:  username,
 		Password:  password,
+		RoleName:  roleToAssign,
 	}, nil
 }
 
-func (u *Usecase) ListTeachers(ctx context.Context, page, pageSize int64) ([]q.Teacher, error) {
+func (u *Usecase) ListTeachers(ctx context.Context, page, pageSize int64) ([]repository.TeacherWithRole, error) {
 	tid, err := u.tenantFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 	limit, offset := normalize(page, pageSize)
-	return u.Teachers.ListByTenant(ctx, tid, limit, offset)
+	return u.Teachers.ListWithRoleByTenant(ctx, tid, limit, offset)
 }
 
 func (u *Usecase) UpdateTeacher(ctx context.Context, req schooldto.UpdateTeacherRequest) error {
@@ -276,6 +319,25 @@ func (u *Usecase) UpdateTeacher(ctx context.Context, req schooldto.UpdateTeacher
 	code := cur.TeacherCode
 	if req.TeacherCode != nil {
 		code = sql.NullString{String: *req.TeacherCode, Valid: true}
+	}
+
+	if req.RoleName != nil && *req.RoleName != "" && cur.UserID.Valid {
+		validRoles := map[string]bool{
+			"teacher":         true,
+			"department_head": true,
+			"vice_director":   true,
+			"school_director": true,
+		}
+		if validRoles[*req.RoleName] {
+			roleRow, err := u.Queries.GetRoleByName(ctx, *req.RoleName)
+			if err != nil && u.DB != nil {
+				_, _ = u.DB.ExecContext(ctx, "INSERT OR IGNORE INTO roles (name) VALUES (?)", *req.RoleName)
+				roleRow, err = u.Queries.GetRoleByName(ctx, *req.RoleName)
+			}
+			if err == nil {
+				_ = u.Users.UpdateUserRole(ctx, cur.UserID.String, roleRow.ID)
+			}
+		}
 	}
 
 	return u.Teachers.Update(ctx, q.UpdateTeacherParams{

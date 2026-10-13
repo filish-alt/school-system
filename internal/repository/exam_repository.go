@@ -31,6 +31,47 @@ func (r *ExamRepository) ListByTeacher(ctx context.Context, teacherID string, li
 	})
 }
 
+func (r *ExamRepository) ListByTenant(ctx context.Context, tenantID string, limit, offset int64) ([]q.Exam, error) {
+	query := `
+		SELECT id, tenant_id, title, subject_id, section_id, created_by_teacher_id, duration_minutes, start_time, end_time, status, total_marks, shuffle_options
+		FROM exams
+		WHERE tenant_id = ? OR ? = ''
+		ORDER BY rowid DESC
+		LIMIT ? OFFSET ?
+	`
+	rows, err := r.DB.QueryContext(ctx, query, tenantID, tenantID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []q.Exam
+	for rows.Next() {
+		var i q.Exam
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.Title,
+			&i.SubjectID,
+			&i.SectionID,
+			&i.CreatedByTeacherID,
+			&i.DurationMinutes,
+			&i.StartTime,
+			&i.EndTime,
+			&i.Status,
+			&i.TotalMarks,
+			&i.ShuffleOptions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 func (r *ExamRepository) ListBySection(ctx context.Context, sectionID string, limit, offset int64) ([]q.Exam, error) {
 	return r.Queries.ListExamsBySection(ctx, q.ListExamsBySectionParams{
 		SectionID: sectionID,

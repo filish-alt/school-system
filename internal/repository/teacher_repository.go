@@ -25,12 +25,62 @@ func (r *TeacherRepository) GetByID(ctx context.Context, id string) (q.Teacher, 
 	return r.Queries.GetTeacherByID(ctx, id)
 }
 
+type TeacherWithRole struct {
+	ID           string         `json:"id"`
+	TenantID     sql.NullString `json:"tenant_id"`
+	TeacherCode  sql.NullString `json:"teacher_code"`
+	FirstName    sql.NullString `json:"first_name"`
+	LastName     sql.NullString `json:"last_name"`
+	DepartmentID sql.NullString `json:"department_id"`
+	UserID       sql.NullString `json:"user_id"`
+	Email        sql.NullString `json:"email"`
+	RoleName     sql.NullString `json:"role_name"`
+}
+
 func (r *TeacherRepository) ListByTenant(ctx context.Context, tenantID string, limit, offset int64) ([]q.Teacher, error) {
 	return r.Queries.ListTeachersByTenant(ctx, q.ListTeachersByTenantParams{
 		TenantID: sql.NullString{String: tenantID, Valid: true},
 		Limit:    limit,
 		Offset:   offset,
 	})
+}
+
+func (r *TeacherRepository) ListWithRoleByTenant(ctx context.Context, tenantID string, limit, offset int64) ([]TeacherWithRole, error) {
+	rows, err := r.DB.QueryContext(ctx, `
+		SELECT 
+			t.id, t.tenant_id, t.teacher_code, t.first_name, t.last_name, t.department_id, t.user_id,
+			u.email, COALESCE(r.name, 'teacher') as role_name
+		FROM teachers t
+		LEFT JOIN users u ON t.user_id = u.id
+		LEFT JOIN roles r ON u.role_id = r.id
+		WHERE t.tenant_id = ?
+		ORDER BY t.last_name, t.first_name
+		LIMIT ? OFFSET ?
+	`, tenantID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []TeacherWithRole
+	for rows.Next() {
+		var i TeacherWithRole
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.TeacherCode,
+			&i.FirstName,
+			&i.LastName,
+			&i.DepartmentID,
+			&i.UserID,
+			&i.Email,
+			&i.RoleName,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, i)
+	}
+	return list, rows.Err()
 }
 
 func (r *TeacherRepository) Update(ctx context.Context, p q.UpdateTeacherParams) error {

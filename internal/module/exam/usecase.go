@@ -99,9 +99,19 @@ func (u *Usecase) GetExam(ctx context.Context, id string) (examdto.GetExamRespon
 }
 
 func (u *Usecase) GetTeacherExamQuestions(ctx context.Context, id string) (examdto.GetExamResponse, error) {
-	teacherID, _, err := u.teacherInfo(ctx)
-	if err != nil {
-		return examdto.GetExamResponse{}, err
+	c, ok := ctx.(*gin.Context)
+	if !ok {
+		return examdto.GetExamResponse{}, fmt.Errorf("invalid context")
+	}
+	v, ok := c.Get("claims")
+	if !ok {
+		return examdto.GetExamResponse{}, fmt.Errorf("claims missing")
+	}
+	claims := v.(*security.Claims)
+
+	role := ""
+	if claims.Role != nil {
+		role = *claims.Role
 	}
 
 	exam, err := u.ExamRepo.Get(ctx, id)
@@ -109,8 +119,17 @@ func (u *Usecase) GetTeacherExamQuestions(ctx context.Context, id string) (examd
 		return examdto.GetExamResponse{}, err
 	}
 
-	if exam.CreatedByTeacherID.String != teacherID {
-		return examdto.GetExamResponse{}, fmt.Errorf("you are not authorized to view questions for this exam")
+	// Leadership and Department Heads are authorized to view and review questions for any exam
+	isLeadership := role == "department_head" || role == "school_director" || role == "vice_director" || role == "school_admin" || role == "super_admin"
+
+	if !isLeadership {
+		teacher, err := u.TeacherRepo.GetByUserID(ctx, claims.UserID)
+		if err != nil {
+			return examdto.GetExamResponse{}, err
+		}
+		if exam.CreatedByTeacherID.String != teacher.ID {
+			return examdto.GetExamResponse{}, fmt.Errorf("you are not authorized to view questions for this exam")
+		}
 	}
 
 	return u.getExamDetail(ctx, exam, true)
@@ -187,12 +206,38 @@ func (u *Usecase) getExamDetail(ctx context.Context, exam q.Exam, isTeacher bool
 }
 
 func (u *Usecase) ListExams(ctx context.Context, page, pageSize int64) ([]q.Exam, error) {
-	teacherID, _, err := u.teacherInfo(ctx)
+	c, ok := ctx.(*gin.Context)
+	if !ok {
+		return nil, fmt.Errorf("invalid context")
+	}
+	v, ok := c.Get("claims")
+	if !ok {
+		return nil, fmt.Errorf("claims missing")
+	}
+	claims := v.(*security.Claims)
+	limit, offset := normalize(page, pageSize)
+
+	role := ""
+	if claims.Role != nil {
+		role = *claims.Role
+	}
+
+	tenantID := ""
+	if claims.TenantID != nil {
+		tenantID = *claims.TenantID
+	}
+
+	// For School Leadership and Department Heads, show all exams in the tenant so they can review, approve, and oversee all exams
+	if role == "department_head" || role == "school_director" || role == "vice_director" || role == "school_admin" || role == "super_admin" {
+		return u.ExamRepo.ListByTenant(ctx, tenantID, limit, offset)
+	}
+
+	// For individual teachers, return exams created by them
+	teacher, err := u.TeacherRepo.GetByUserID(ctx, claims.UserID)
 	if err != nil {
 		return nil, err
 	}
-	limit, offset := normalize(page, pageSize)
-	return u.ExamRepo.ListByTeacher(ctx, teacherID, limit, offset)
+	return u.ExamRepo.ListByTeacher(ctx, teacher.ID, limit, offset)
 }
 
 func (u *Usecase) ListStudentExams(ctx context.Context) ([]q.Exam, error) {

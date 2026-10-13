@@ -161,6 +161,16 @@ func (h *Handler) GetStudent(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
+func normalizePagination(page, pageSize int64) (int64, int64) {
+	if pageSize <= 0 {
+		pageSize = 100
+	}
+	if page <= 0 {
+		page = 1
+	}
+	return page, pageSize
+}
+
 func (h *Handler) ListStudents(c *gin.Context) {
 	tenantID := c.Query("tenant_id")
 	if strings.TrimSpace(tenantID) == "" {
@@ -169,7 +179,8 @@ func (h *Handler) ListStudents(c *gin.Context) {
 	}
 	var q sdto.ListQuery
 	_ = c.ShouldBindQuery(&q)
-	out, err := h.UC.Students.ListByTenant(c, tenantID, q.PageSize, (q.Page-1)*q.PageSize)
+	page, pageSize := normalizePagination(q.Page, q.PageSize)
+	out, err := h.UC.Students.ListByTenant(c, tenantID, pageSize, (page-1)*pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

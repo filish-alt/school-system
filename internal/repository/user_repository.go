@@ -111,3 +111,8 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, userID, hash string
 		ID:           userID,
 	})
 }
+
+func (r *UserRepository) UpdateUserRole(ctx context.Context, userID string, roleID int64) error {
+	_, err := r.DB.ExecContext(ctx, "UPDATE users SET role_id = ? WHERE id = ?", roleID, userID)
+	return err
+}

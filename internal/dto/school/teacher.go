@@ -6,12 +6,14 @@ type CreateTeacherRequest struct {
 	TeacherCode  string  `json:"teacher_code" binding:"required"`
 	DepartmentID *string `json:"department_id"`
 	Email        *string `json:"email"`
+	RoleName     *string `json:"role_name"`
 }
 
 type CreateTeacherResponse struct {
 	TeacherID string `json:"teacher_id"`
 	Username  string `json:"username"`
 	Password  string `json:"password"`
+	RoleName  string `json:"role_name"`
 }
 
 type UpdateTeacherRequest struct {
@@ -20,6 +22,7 @@ type UpdateTeacherRequest struct {
 	LastName     *string `json:"last_name"`
 	TeacherCode  *string `json:"teacher_code"`
 	DepartmentID *string `json:"department_id"`
+	RoleName     *string `json:"role_name"`
 }
 
 type AssignRequest struct {

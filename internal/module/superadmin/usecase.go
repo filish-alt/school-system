@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/csv"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"strings"
 
@@ -103,7 +104,11 @@ func (u *Usecase) UpdateStudent(ctx context.Context, req sdto.UpdateStudentReque
 }
 
 func (u *Usecase) CreateStudent(ctx context.Context, req sdto.CreateStudentRequest) (*sdto.CreateStudentResponse, error) {
-	username := req.StudentCode
+	code := strings.TrimSpace(req.StudentCode)
+	if code == "" {
+		code = fmt.Sprintf("STU-%s", randHex(4))
+	}
+	username := code
 	password := randHex(6)
 	hash, err := security.HashPassword(password)
 	if err != nil {
@@ -141,7 +146,7 @@ func (u *Usecase) CreateStudent(ctx context.Context, req sdto.CreateStudentReque
 	err = u.Students.Create(ctx, q.CreateStudentParams{
 		ID:           stID,
 		TenantID:     sql.NullString{Valid: true, String: req.TenantID},
-		StudentCode:  sql.NullString{Valid: true, String: req.StudentCode},
+		StudentCode:  sql.NullString{Valid: true, String: code},
 		FirstName:    sql.NullString{Valid: true, String: req.FirstName},
 		LastName:     sql.NullString{Valid: true, String: req.LastName},
 		Year:         year,
@@ -175,7 +180,10 @@ func (u *Usecase) ImportStudents(ctx context.Context, tenantID string, r io.Read
 	}
 	col := map[string]int{}
 	for i, h := range header {
-		col[strings.ToLower(strings.TrimSpace(h))] = i
+		normalized := strings.ToLower(strings.TrimSpace(h))
+		normalized = strings.ReplaceAll(normalized, "_", " ")
+		normalized = strings.ReplaceAll(normalized, "-", " ")
+		col[normalized] = i
 	}
 	var res []ImportResult
 	rowNum := 1
@@ -189,31 +197,60 @@ func (u *Usecase) ImportStudents(ctx context.Context, tenantID string, r io.Read
 			res = append(res, ImportResult{Row: rowNum, Error: err.Error()})
 			continue
 		}
-		get := func(name string) string {
-			if idx, ok := col[name]; ok && idx < len(row) {
-				return strings.TrimSpace(row[idx])
+
+		get := func(keys ...string) string {
+			for _, k := range keys {
+				norm := strings.ToLower(strings.TrimSpace(k))
+				norm = strings.ReplaceAll(norm, "_", " ")
+				norm = strings.ReplaceAll(norm, "-", " ")
+				if idx, ok := col[norm]; ok && idx < len(row) {
+					val := strings.TrimSpace(row[idx])
+					if val != "" {
+						return val
+					}
+				}
 			}
 			return ""
 		}
+
+		studentCode := get("student code", "student_code", "student id", "student_id", "code", "id")
+		firstName := get("first name", "first_name", "firstname", "name")
+		lastName := get("last name", "last_name", "lastname", "surname")
+
+		// If row is completely empty, skip
+		if studentCode == "" && firstName == "" && lastName == "" {
+			continue
+		}
+
+		if studentCode == "" {
+			studentCode = fmt.Sprintf("STU-%s-%03d", randHex(3), rowNum)
+		}
+		if firstName == "" {
+			firstName = "Student"
+		}
+		if lastName == "" {
+			lastName = fmt.Sprintf("#%d", rowNum)
+		}
+
 		req := sdto.CreateStudentRequest{
 			TenantID:    tenantID,
-			StudentCode: get("student_code"),
-			FirstName:   get("first_name"),
-			LastName:    get("last_name"),
+			StudentCode: studentCode,
+			FirstName:   firstName,
+			LastName:    lastName,
 		}
-		sec := get("section_id")
+		sec := get("section id", "section_id", "section")
 		if sec != "" {
 			req.SectionID = &sec
 		}
-		dep := get("department_id")
+		dep := get("department id", "department_id", "department")
 		if dep != "" {
 			req.DepartmentID = &dep
 		}
-		em := get("email")
+		em := get("email", "email address", "mail")
 		if em != "" {
 			req.Email = &em
 		}
-		yr := get("year")
+		yr := get("year", "grade", "grade level", "grade_level")
 		if yr != "" {
 			req.Year = &yr
 		}
